@@ -6,13 +6,17 @@ export async function main(ns) {
     } else {
         target = ns.getHostname();
     }
-    const initialMoney = Math.min(ns.getServerMoneyAvailable(target), ns.getServerMaxMoney(target) * 0.8);
+    const initialMoney = ns.getServerMaxMoney(target);
+    //  Math.min(ns.getServerMoneyAvailable(target), ns.getServerMaxMoney(target) * 0.8);
     const securityThresh = ns.getServerMinSecurityLevel(target) * 2;
     if (!ns.hasRootAccess(target)) {
         ns.tprint("ERROR: No root access to target");
         ns.exit();
     }
-    ns.tprint(`SUCCESS: Running in ${cyanStr(ns.getHostname())} targeting ${cyanStr(target)}: Monney: ${cyanStr(ns.formatNumber(initialMoney))}/${cyanStr(ns.formatNumber(ns.getServerMaxMoney(target)))}, SecurityThresh: ${cyanStr(ns.formatNumber(securityThresh))}`);
+    ns.tprint(`SUCCESS: \
+        Running in ${cyanStr(ns.getHostname())} targeting ${cyanStr(target)}: \
+        Monney: ${cyanStr(ns.formatNumber(ns.getServerMoneyAvailable(target)))}/${cyanStr(ns.formatNumber(ns.getServerMaxMoney(target)))}, \
+        SecurityThresh: ${cyanStr(ns.formatNumber(securityThresh))}`);
     while (true) {
         const curSecurityLevel = ns.getServerSecurityLevel(target);
         const curMoneyAvailable = ns.getServerMoneyAvailable(target);
