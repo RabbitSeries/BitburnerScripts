@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "strict": true,
+    "strict": false,
     "rootDir": "src/",
     "outDir": "dist/",
     "baseUrl": "src/",
