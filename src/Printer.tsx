@@ -12,7 +12,7 @@ export async function main(ns: NS): Promise<void> {
         const currentMoney = ns.getServerMoneyAvailable(hostname);
         const maxMoney = ns.getServerMaxMoney(hostname);
         const hackTime = ns.getHackTime(hostname);
-        const moneyPerHackTime = maxMoney > 0 && hackTime > 0 ? currentMoney / hackTime : 0;
+        const moneyPerHackTime = maxMoney > 0 && hackTime > 0 ? maxMoney / hackTime : 0;
         formattedServers.push({
             hostname,
             hasRootAccess: ns.hasRootAccess(hostname),
