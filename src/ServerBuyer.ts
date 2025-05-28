@@ -1,5 +1,6 @@
-/** @param {NS} ns */
-export async function main(ns) {
+import { NS } from "@ns";
+
+export async function main(ns : NS) {
     const ram = 8;
     let i = ns.getPurchasedServers().length;
     ns.tprint(`Currently having ${i}/${ns.getPurchasedServerLimit()} servers`);

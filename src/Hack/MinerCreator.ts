@@ -1,14 +1,13 @@
 import { NS } from "@ns";
-import { IMiner, IMinerArgs, IMinerPath } from "./IMiner";
+import { IMiner, IMinerArgs } from "./IMiner";
 import { RegularMiner } from "./RegularMiner";
+import { TryHacking } from "./HackHelpers";
 export default function MinerCreator(ns: NS, MinerArgs: IMinerArgs): IMiner {
     return {
-        exec: () => {
-            return ns.exec(IMinerPath, MinerArgs.hostname, MinerArgs.threadOrOptions);
+        args: MinerArgs,
+        run: function () {
+            return TryHacking(ns, this);
         },
-        Args: MinerArgs,
-        ns: ns,
-        ScriptPath: IMinerPath,
-        HierachyPaths: [IMinerPath]
+        ns: ns
     }
 }
