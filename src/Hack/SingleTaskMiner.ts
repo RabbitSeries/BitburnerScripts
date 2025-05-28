@@ -2,38 +2,33 @@ import { IMiner, IMinerArgs, IMinerPath, scp } from "./IMiner";
 import { ConsoleColorPath, cyanStr } from "../Console/ConsoleColor";
 import { NS, RunOptions } from "@ns";
 
-export class RegularMinerArgs implements IMinerArgs {
+export class SingleTaskMinerArgs implements IMinerArgs {
     hostname: string;
     targetname: string;
     threadOrOptions?: number | RunOptions;
+    task: number
 }
-export const RegularMinerPath = 'Hack/RegularMiner.js'
-const Hierachy = [RegularMinerPath, IMinerPath, ConsoleColorPath]
-export class RegularMiner implements IMiner {
+export const SingleTaskPath = 'Hack/SingleTaskMiner.js'
+const Hierachy = [SingleTaskPath, IMinerPath, ConsoleColorPath]
+export class SigleTaskMiner implements IMiner {
     ns: NS;
-    Args: RegularMinerArgs;
+    Args: SingleTaskMinerArgs;
     HierachyPaths = Hierachy;
-    ScriptPath = RegularMinerPath;
-    constructor(ns: NS, Args: RegularMinerArgs) {
+    ScriptPath = SingleTaskPath;
+    constructor(ns: NS, Args: SingleTaskMinerArgs) {
         this.Args = Args;
         this.ns = ns;
     }
-    /**
-     * 
-     * @returns — Returns the PID of a successfully started script, and 0 otherwise.
-     */
     exec() {
         scp(this.ns, this, this.Args.targetname);
-        return this.ns.exec(this.ScriptPath, this.Args.hostname, this.Args.threadOrOptions, this.Args.hostname, this.Args.targetname)
+        return this.ns.exec(this.ScriptPath, this.Args.hostname, this.Args.threadOrOptions, this.Args.hostname, this.Args.targetname, this.Args.task);
     }
     getMaxThread = () => typeof this.Args.threadOrOptions === 'number' ? this.Args.threadOrOptions : this.Args.threadOrOptions.threads;
 }
 
 export async function main(ns: NS) {
-    const hostname: string = ns.args[0].toString(), target = ns.args[1].toString();
-    const initialMoney =
-        //  ns.getServerMaxMoney(target);
-        Math.min(ns.getServerMoneyAvailable(target), ns.getServerMaxMoney(target) * 0.8);
+    const hostname: string = ns.args[0].toString(), target = ns.args[1].toString(), task = ns.args[2].valueOf();
+    const initialMoney = Math.min(ns.getServerMoneyAvailable(target), ns.getServerMaxMoney(target) * 0.8);
     const securityThresh = ns.getServerMinSecurityLevel(target) * 2;
     if (!ns.hasRootAccess(target)) {
         ns.tprint("ERROR: No root access to target");
@@ -52,21 +47,24 @@ export async function main(ns: NS) {
         ns.print(`INFO Targeting: ${target}`)
         ns.print(`INFO Current security level at: ${cyanStr(`${curSecurityLevel}/${securityThresh}`)}`)
         ns.print(`INFO Current money available at: ${cyanStr(`${ns.formatNumber(curMoneyAvailable)}/${ns.formatNumber(initialMoney)}`)}`);
-        if (curSecurityLevel > securityThresh) {
+        if (task === 0) {
+            ns.print("INFO Hacking");
+            await ns.hack(target);
+            ns.print("SUCCESS Hacking");
+            ns.tprint(`Hacking from ${hostname}, targeting ${target}`);
+        } else if (task === 1) {
             ns.print("INFO Weakening");
             await ns.weaken(target);
             ns.print("SUCCESS Weakening");
             ns.tprint(`Weakening from ${hostname}, targeting ${target}`);
-        } else if (curMoneyAvailable < initialMoney) {
+        } else if (task === 2) {
             ns.print("INFO Growing");
             await ns.grow(target);
             ns.print("SUCCESS Growing");
             ns.tprint(`Growing from ${hostname}, targeting ${target}`);
         } else {
-            ns.print("INFO Hacking");
-            await ns.hack(target);
-            ns.print("SUCCESS Hacking");
-            ns.tprint(`Hacking from ${hostname}, targeting ${target}`);
+            ns.print(`ERROR: Runtime error SglMiner is not able to fectch a task, passed task is ${task}`);
+            ns.exit()
         }
     }
 }

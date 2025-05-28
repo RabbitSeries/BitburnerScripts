@@ -1,12 +1,13 @@
 import React from "./lib/react";
 import type { NS } from "@ns";
 import ServerInfo, { FormattedServerInfo } from './Ui/ServerInfo';
+import scanAllServers from "./Hack/Scanner";
 export async function main(ns: NS): Promise<void> {
     const allServers = scanAllServers(ns);
 
     const formattedServers: FormattedServerInfo[] = [];
 
-    for (const hostname of allServers) {
+    for (const hostname of allServers.valueset) {
         const currentMoney = ns.getServerMoneyAvailable(hostname);
         const maxMoney = ns.getServerMaxMoney(hostname);
         const hackTime = ns.getHackTime(hostname);
@@ -35,22 +36,4 @@ export async function main(ns: NS): Promise<void> {
     while (true) {
         await ns.asleep(1000);
     }
-}
-
-function scanAllServers(ns: NS): string[] {
-    const visited = new Set<string>();
-    const queue = ["home"];
-    visited.add("home");
-
-    while (queue.length > 0) {
-        const current = queue.shift()!;
-        for (const neighbor of ns.scan(current)) {
-            if (!visited.has(neighbor)) {
-                visited.add(neighbor);
-                queue.push(neighbor);
-            }
-        }
-    }
-
-    return Array.from(visited);
 }
