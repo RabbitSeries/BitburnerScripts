@@ -1,11 +1,9 @@
 import React from "./lib/react";
 import type { NS } from "@ns";
-import ServerInfo, { FormattedServerInfo } from './lib/ServerInfo';
+import ServerInfo, { FormattedServerInfo } from './Ui/ServerInfo';
 export async function main(ns: NS): Promise<void> {
-    // First collect all server names
     const allServers = scanAllServers(ns);
 
-    // Then pre-format all data before rendering
     const formattedServers: FormattedServerInfo[] = [];
 
     for (const hostname of allServers) {

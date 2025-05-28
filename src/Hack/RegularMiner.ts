@@ -31,8 +31,9 @@ export class RegularMiner implements IMiner {
 
 export async function main(ns: NS) {
     const hostname: string = ns.args[0].toString(), target = ns.args[1].toString();
-    const initialMoney = ns.getServerMaxMoney(target);
-    //  Math.min(ns.getServerMoneyAvailable(target), ns.getServerMaxMoney(target) * 0.8);
+    const initialMoney =
+        //  ns.getServerMaxMoney(target);
+        Math.min(ns.getServerMoneyAvailable(target), ns.getServerMaxMoney(target) * 0.8);
     const securityThresh = ns.getServerMinSecurityLevel(target) * 2;
     if (!ns.hasRootAccess(target)) {
         ns.tprint("ERROR: No root access to target");
@@ -55,14 +56,17 @@ export async function main(ns: NS) {
             ns.print("INFO Weakening");
             await ns.weaken(target);
             ns.print("SUCCESS Weakening");
+            ns.tprint(`Weakening from ${hostname}, targeting ${target}`);
         } else if (curMoneyAvailable < initialMoney) {
             ns.print("INFO Growing");
             await ns.grow(target);
             ns.print("SUCCESS Growing");
+            ns.tprint(`Growing from ${hostname}, targeting ${target}`);
         } else {
             ns.print("INFO Hacking");
             await ns.hack(target);
             ns.print("SUCCESS Hacking");
+            ns.tprint(`Hacking from ${hostname}, targeting ${target}`);
         }
     }
 }
