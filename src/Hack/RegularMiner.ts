@@ -3,8 +3,8 @@ import { ConsoleColorPath, cyanStr } from "../Console/ConsoleColor";
 import { NS, RunOptions } from "@ns";
 
 export class RegularMinerArgs implements IMinerArgs {
-    hostname: string;
-    targetname: string;
+    hostname: string = "";
+    targetname: string = "";
     threadOrOptions?: number | RunOptions;
 }
 export const RegularMinerPath = 'Hack/RegularMiner.js'
@@ -18,15 +18,10 @@ export class RegularMiner implements IMiner {
         this.Args = Args;
         this.ns = ns;
     }
-    /**
-     * 
-     * @returns — Returns the PID of a successfully started script, and 0 otherwise.
-     */
     exec() {
         scp(this.ns, this, this.Args.targetname);
         return this.ns.exec(this.ScriptPath, this.Args.hostname, this.Args.threadOrOptions, this.Args.hostname, this.Args.targetname)
     }
-    getMaxThread = () => typeof this.Args.threadOrOptions === 'number' ? this.Args.threadOrOptions : this.Args.threadOrOptions.threads;
 }
 
 export async function main(ns: NS) {

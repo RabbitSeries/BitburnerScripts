@@ -3,14 +3,14 @@ import { ConsoleColorPath, cyanStr } from "../Console/ConsoleColor";
 import { NS, RunOptions } from "@ns";
 
 export class SingleTaskMinerArgs implements IMinerArgs {
-    hostname: string;
-    targetname: string;
+    hostname: string = "";
+    targetname: string = "";
     threadOrOptions?: number | RunOptions;
-    task: number
+    task: number = -1
 }
 export const SingleTaskPath = 'Hack/SingleTaskMiner.js'
 const Hierachy = [SingleTaskPath, IMinerPath, ConsoleColorPath]
-export class SigleTaskMiner implements IMiner {
+export class SingleTaskMiner implements IMiner {
     ns: NS;
     Args: SingleTaskMinerArgs;
     HierachyPaths = Hierachy;
@@ -23,7 +23,6 @@ export class SigleTaskMiner implements IMiner {
         scp(this.ns, this, this.Args.targetname);
         return this.ns.exec(this.ScriptPath, this.Args.hostname, this.Args.threadOrOptions, this.Args.hostname, this.Args.targetname, this.Args.task);
     }
-    getMaxThread = () => typeof this.Args.threadOrOptions === 'number' ? this.Args.threadOrOptions : this.Args.threadOrOptions.threads;
 }
 
 export async function main(ns: NS) {

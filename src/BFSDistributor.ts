@@ -1,12 +1,12 @@
 import { NS } from '@ns'
 import { cyanStr } from 'Console/ConsoleColor';
 import { RegularMiner, RegularMinerPath } from './Hack/RegularMiner';
-import { SigleTaskMiner as SingleTaskMiner, SingleTaskMinerArgs, SingleTaskPath } from './Hack/SingleTaskMiner';
+import { SingleTaskMiner, SingleTaskPath } from './Hack/SingleTaskMiner';
 import scanAllServers from './Hack/Scanner';
 import { IMiner } from './Hack/IMiner';
 class DistributorArgs {
-    miner: string;
-    target: string;
+    miner: string | null = null;
+    target: string | null = null;
 }
 
 const Miners = new Set(["RegularMiner", "SingleTaskMiner"]);
@@ -77,7 +77,7 @@ function printHelp(ns: NS) {
     }
 }
 
-function parseArgs(ns: NS): DistributorArgs {
+function parseArgs(ns: NS): DistributorArgs | null {
     if (ns.args.length == 0) {
         ns.tprint("Empty args");
         printHelp(ns);

@@ -1,4 +1,4 @@
-import React from '../lib/react';
+import React from '@react';
 import type { NS } from "@ns";
 
 interface FormattedServerInfo {
