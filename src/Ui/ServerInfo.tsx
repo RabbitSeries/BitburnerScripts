@@ -1,4 +1,4 @@
-import React from '@react';
+import React from 'lib/react';
 import type { NS } from "@ns";
 
 interface FormattedServerInfo {
@@ -57,6 +57,7 @@ const ServerInfo = ({ servers, ns }: ServerInfoProps) => {
                         <th>Hack Time   </th>
                         <th>$/s         </th>
                         <th>Notes       </th>
+                        <th>RAM       </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,6 +74,7 @@ const ServerInfo = ({ servers, ns }: ServerInfoProps) => {
                             <td>{server.hackTime}</td>
                             <td>{server.moneyPerHackTime}</td>
                             <td>{ns.formatNumber(1000000)}</td>
+                            <td>{ns.formatNumber(ns.getServerMaxRam(server.hostname))}</td>
                         </tr>
                     ))}
                 </tbody>

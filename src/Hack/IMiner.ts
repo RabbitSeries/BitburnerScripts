@@ -1,23 +1,17 @@
 import { NS, RunOptions } from "@ns";
-interface IMinerArgs {
-    hostname: string,
-    targetname: string | null,
+export interface IMinerArgs {
+    hostName: string,
+    scriptPath: string,
+    targetName: string | null,
     threadOrOptions?: number | RunOptions
 }
 
-type IMiner = {
-    Args: IMinerArgs,
+export type IMiner = {
+    args: IMinerArgs,
     ns: NS,
-    ScriptPath: string
-    HierachyPaths: string[],
-    exec: () => number,
+    run: () => number,
 };
 
-const IMinerPath = 'Hack/IMiner.js'
-
-export function scp(ns: NS, miner: IMiner, destination: string): void {
-    ns.scp(miner.ScriptPath, destination);
-}
+export const IMinerPath = "Hack/IMiner.js"
 
 export async function main(ns: NS) { }
-export { IMiner, IMinerArgs, IMinerPath }

@@ -2,7 +2,7 @@ import { NS } from '@ns'
 import { cyanStr } from 'Console/ConsoleColor';
 import { RegularMiner, RegularMinerPath } from './Hack/RegularMiner';
 import { SingleTaskMiner, SingleTaskPath } from './Hack/SingleTaskMiner';
-import scanAllServers from './Hack/Scanner';
+import * as HackHelpers from './Hack/HackHelpers';
 import { IMiner } from './Hack/IMiner';
 class DistributorArgs {
     miner: string | null = null;
@@ -22,7 +22,7 @@ export async function main(ns: NS) {
         ns.tprint(`ERROR: Unsupported miner: ${args.miner}`);
         ns.exit();
     }
-    const hosts = scanAllServers(ns);
+    const hosts = HackHelpers.ScanAllServers(ns);
     if (!hosts.valueset.has(args.target)) {
         ns.tprint(`ERROR: unkown target: ${args.target}`);
         ns.exit();
@@ -31,35 +31,54 @@ export async function main(ns: NS) {
     const target = args.target;
     const Tasks = [0, 1, 2, 1];//hack, weaken, grow, weaken
     let curTaskId = 0;
+    const m = ns.getScriptRam(ScriptPath);
     for (const currentHost of hosts.sorted) {
-        const m = ns.getScriptRam(ScriptPath),
-            U = ns.getServerUsedRam(currentHost),
+        const U = ns.getServerUsedRam(currentHost),
             M = ns.getServerMaxRam(currentHost),
             R = M - U;
-        if (currentHost !== "home") {
-            TryNuke(ns, currentHost);
-            if (ns.hasRootAccess(currentHost)) {
-                const miner = args.miner === "RegularMiner" ?
-                    new RegularMiner(ns, {
-                        hostname: currentHost,
-                        targetname: target,
-                        threadOrOptions: Math.floor(M / m)
-                    }) :
-                    new SingleTaskMiner(ns, {
-                        hostname: currentHost,
-                        targetname: target,
-                        threadOrOptions: Math.floor(M / m),
-                        task: Tasks[curTaskId]
-                    });
-                TryHacking(ns, miner);
-                curTaskId = (curTaskId + 1) % 4;
-            } else {
-                ns.tprint(`WARN:\t Failed to run scipt on traget ${cyanStr(currentHost)}, skipping`)
-                ns.tprint(`INFO:\t\t Has Root Access: ${ns.hasRootAccess(currentHost)}`);
-                ns.tprint(`INFO:\t\t Required mem usage: ${m}(Ram)/${U}(Used)/${M}(Max)/${R}(Remain)/`);
-                ns.tprint(`INFO:\t\t Required hack level: ${ns.getHackingLevel()}/${ns.getServerRequiredHackingLevel(currentHost)}`)
-                ns.tprint(`INFO:\t\t Required open ports: ${ns.getServerNumPortsRequired(currentHost)}`);
-            }
+        const MaxThreads = Math.floor(M / m), MaxShareThread = Math.floor(M / ns.getScriptRam("MemSharer.js"));
+        if (currentHost === "home") {
+            continue;
+        }
+        if (!HackHelpers.TryNuke(ns, currentHost) || (MaxThreads === 0 && MaxShareThread === 0)) {
+            ns.tprint(`WARN:\t Failed to run scipt on traget ${cyanStr(currentHost)}, skipping`)
+            ns.print(`WARN:\t Failed to run scipt on traget ${cyanStr(currentHost)}, skipping`)
+            ns.print(`INFO:\t\t Has Root Access: ${ns.hasRootAccess(currentHost)}`);
+            ns.print(`INFO:\t\t Required mem usage: ${m}(Ram)/${U}(Used)/${M}(Max)/${R}(Remain)/`);
+            ns.print(`INFO:\t\t Required hack level: ${ns.getHackingLevel()}/${ns.getServerRequiredHackingLevel(currentHost)}`)
+            ns.print(`INFO:\t\t Required open ports: ${ns.getServerNumPortsRequired(currentHost)}`);
+            continue;
+        }
+        const miner: IMiner = MaxThreads > 0 ? (args.miner === "RegularMiner" ?
+            new RegularMiner(ns, {
+                hostName: currentHost,
+                targetName: target,
+                scriptPath: RegularMinerPath,
+                threadOrOptions: Math.floor(M / m)
+            }) :
+            new SingleTaskMiner(ns, {
+                hostName: currentHost,
+                targetName: target,
+                scriptPath: SingleTaskPath,
+                threadOrOptions: Math.floor(M / m),
+                task: Tasks[curTaskId]
+            })) :
+            {
+                args: {
+                    hostName: currentHost,
+                    scriptPath: "MemSharer.js",
+                    targetName: target,
+                    threadOrOptions: MaxShareThread
+                },
+                ns: ns,
+                run: function (): number {
+                    // return this.ns.exec("MemSharer.js", target, MaxShareThread); $ Can't bind outside varaible, which then becomes undefined
+                    return this.ns.exec("MemSharer.js", target, this.args.threadOrOptions);
+                }
+            };
+        HackHelpers.TryHacking(ns, miner);
+        if (MaxThreads > 0 && args.miner === "SingleTaskMiner") {
+            curTaskId = (curTaskId + 1) % 4;
         }
     }
 }
@@ -109,47 +128,4 @@ function parseArgs(ns: NS): DistributorArgs | null {
         argId++;
     }
     return res;
-}
-
-function TryHacking(ns: NS, miner: IMiner) {
-    const currentHost = miner.Args.hostname, target = miner.Args.targetname;
-    if (!ns.scp(miner.HierachyPaths, currentHost)) {
-        ns.tprint(`Failed Scp ${miner.HierachyPaths} to ${currentHost}`)
-        return
-    }
-    try {
-        ns.killall(currentHost);
-        if (target !== null) {
-            if (miner.exec()) {
-                ns.tprint(`SUCCESS: running ${miner.ScriptPath} on ${currentHost} hacking ${target})`);
-            } else {
-                ns.tprint(`FAILED: running ${miner.ScriptPath} on ${currentHost} hacking ${target} )`);
-            }
-        }
-    } catch (e) {
-        ns.tprint(`ERROR: Fatal error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-}
-
-function TryNuke(ns: NS, target: string) {
-    if (!ns.hasRootAccess(target)) {
-        try {
-            try {
-                ns.brutessh(target);
-            } catch { }
-            try {
-                ns.ftpcrack(target);
-            } catch { }
-            try {
-                ns.httpworm(target);
-            } catch { }
-            try {
-                ns.sqlinject(target);
-            } catch { }
-            ns.nuke(target);
-        } catch {
-            return ns.hasRootAccess(target);
-        }
-    }
-    return ns.hasRootAccess(target);
 }

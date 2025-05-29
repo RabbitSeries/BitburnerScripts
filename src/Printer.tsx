@@ -1,9 +1,9 @@
-import React from "./lib/react";
+import React from "lib/react";
 import type { NS } from "@ns";
-import ServerInfo, { FormattedServerInfo } from './Ui/ServerInfo';
-import scanAllServers from "./Hack/Scanner";
+import ServerInfo, { FormattedServerInfo } from 'Ui/ServerInfo';
+import * as HackHelpers from "./Hack/HackHelpers";
 export async function main(ns: NS): Promise<void> {
-    const allServers = scanAllServers(ns);
+    const allServers = HackHelpers.ScanAllServers(ns);
 
     const formattedServers: FormattedServerInfo[] = [];
 

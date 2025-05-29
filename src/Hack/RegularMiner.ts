@@ -1,26 +1,27 @@
-import { IMiner, IMinerArgs, IMinerPath, scp } from "./IMiner";
-import { ConsoleColorPath, cyanStr } from "../Console/ConsoleColor";
 import { NS, RunOptions } from "@ns";
+import { IMiner, IMinerArgs } from "./IMiner";
+import { ConsoleColorPath, cyanStr } from "../Console/ConsoleColor";
+import * as HackHelpers from "./HackHelpers";
 
 export class RegularMinerArgs implements IMinerArgs {
-    hostname: string = "";
-    targetname: string = "";
+    hostName: string = "";
+    targetName: string = "";
+    scriptPath: string = "";
     threadOrOptions?: number | RunOptions;
 }
+
 export const RegularMinerPath = 'Hack/RegularMiner.js'
-const Hierachy = [RegularMinerPath, IMinerPath, ConsoleColorPath]
+
 export class RegularMiner implements IMiner {
     ns: NS;
-    Args: RegularMinerArgs;
-    HierachyPaths = Hierachy;
+    args: RegularMinerArgs;
     ScriptPath = RegularMinerPath;
     constructor(ns: NS, Args: RegularMinerArgs) {
-        this.Args = Args;
+        this.args = Args;
         this.ns = ns;
     }
-    exec() {
-        scp(this.ns, this, this.Args.targetname);
-        return this.ns.exec(this.ScriptPath, this.Args.hostname, this.Args.threadOrOptions, this.Args.hostname, this.Args.targetname)
+    run() {
+        return HackHelpers.TryHacking(this.ns, this, this.args.hostName, this.args.targetName);
     }
 }
 
@@ -50,18 +51,18 @@ export async function main(ns: NS) {
         if (curSecurityLevel > securityThresh) {
             ns.print("INFO Weakening");
             await ns.weaken(target);
-            ns.print("SUCCESS Weakening");
-            ns.tprint(`Weakening from ${hostname}, targeting ${target}`);
+            ns.print("SUCCESS Hacked");
+            ns.tprint(`SUCCESS Weakened from ${hostname}, targeting ${target}`);
         } else if (curMoneyAvailable < initialMoney) {
             ns.print("INFO Growing");
             await ns.grow(target);
-            ns.print("SUCCESS Growing");
-            ns.tprint(`Growing from ${hostname}, targeting ${target}`);
+            ns.print("SUCCESS Weakened");
+            ns.tprint(`SUCCESS Grew from ${hostname}, targeting ${target}`);
         } else {
             ns.print("INFO Hacking");
             await ns.hack(target);
-            ns.print("SUCCESS Hacking");
-            ns.tprint(`Hacking from ${hostname}, targeting ${target}`);
+            ns.print("SUCCESS Grew");
+            ns.tprint(`SUCCESS Hacked from ${hostname}, targeting ${target}`);
         }
     }
 }
