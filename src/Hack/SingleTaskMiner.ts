@@ -11,7 +11,7 @@ export class SingleTaskMinerArgs implements IMinerArgs {
     task: number = -1
 }
 
-export const SingleTaskPath = 'Hack/SingleTaskMiner.js'
+export const SingleTaskMinerPath = 'Hack/SingleTaskMiner.js'
 
 export class SingleTaskMiner implements IMiner {
     ns: NS;
@@ -28,39 +28,34 @@ export class SingleTaskMiner implements IMiner {
 export async function main(ns: NS) {
     const hostname: string = ns.args[0].toString(), target = ns.args[1].toString(), task = ns.args[2].valueOf();
     const initialMoney = ns.getServerMoneyAvailable(target);
-    const securityThresh = ns.getServerMinSecurityLevel(target);
     if (!ns.hasRootAccess(target)) {
         ns.tprint("ERROR: No root access to target");
         ns.exit();
     }
-    ns.tprint(`SUCCESS: Running in ${cyanStr(hostname)} targeting ${cyanStr(target)}:`)
-    ns.tprint(`INFO \tMonney: ${cyanStr(ns.formatNumber(ns.getServerMoneyAvailable(target)))}/${cyanStr(ns.formatNumber(ns.getServerMaxMoney(target)))}`)
-    ns.tprint(`INFO \tSecurityThresh: ${cyanStr(ns.formatNumber(securityThresh))}`);
+    ns.tprint(`SUCCESS: Running in ${cyanStr(hostname)} targeting ${cyanStr(target)} with task ${task}`)
     while (true) {
-        const curSecurityLevel = ns.getServerSecurityLevel(target), curMoneyAvailable = ns.getServerMoneyAvailable(target);
+        const curMoneyAvailable = ns.getServerMoneyAvailable(target);
         if (curMoneyAvailable === 0) {
             ns.tprint(`ERROR: Target(${target}) is drained`);
             ns.exit();
         }
         ns.print('')
         ns.print(`INFO Targeting: ${target}`)
-        ns.print(`INFO Current security level at: ${cyanStr(`${curSecurityLevel}/${securityThresh}`)}`)
-        ns.print(`INFO Current money available at: ${cyanStr(`${ns.formatNumber(curMoneyAvailable)}/${ns.formatNumber(initialMoney)}`)}`);
         if (task === 0) {
             ns.print("INFO Hacking");
             await ns.hack(target);
             ns.print("SUCCESS Hacked");
-            ns.tprint(`SUCCESS Weakened from ${hostname}, targeting ${target}`);
+            ns.tprint(`SUCCESS Hacked from ${hostname}, targeting ${target}`);
         } else if (task === 1) {
             ns.print("INFO Weakening");
             await ns.weaken(target);
             ns.print("SUCCESS Weakened");
-            ns.tprint(`SUCCESS Grew from ${hostname}, targeting ${target}`);
+            ns.tprint(`SUCCESS Weakened from ${hostname}, targeting ${target}`);
         } else if (task === 2) {
             ns.print("INFO Growing");
             await ns.grow(target);
             ns.print("SUCCESS Grew");
-            ns.tprint(`SUCCESS Hacked from ${hostname}, targeting ${target}`);
+            ns.tprint(`SUCCESS Grew from ${hostname}, targeting ${target}`);
         } else {
             ns.print(`ERROR: Runtime error SglMiner is not able to fectch a task, passed task is ${task}`);
             ns.exit()

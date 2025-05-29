@@ -52,14 +52,14 @@ export function TryHacking(ns: NS, miner: IMiner, ...args: ScriptArg[]): number 
     try {
         ns.killall(currentHost);
         Scp(ns, currentHost);
-        status = ns.exec(scriptPath, currentHost, miner.args.threadOrOptions, ...args);
+        status = ns.exec(scriptPath, currentHost, threadOptions, ...args);
     } catch (e) {
         ns.print(`ERROR: Fatal error: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (status) {
-        ns.tprint(`SUCCESS: running ${scriptPath} on ${currentHost} hacking ${target}) with threadOptions: ${threadOptions} )`);
+        ns.tprint(`SUCCESS: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`);
     } else {
-        ns.tprint(`FAILED: running ${scriptPath} on ${currentHost} hacking ${target} ) with threadOptions: ${threadOptions} )`);
+        ns.tprint(`FAILED: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`);
     }
     return status;
 }

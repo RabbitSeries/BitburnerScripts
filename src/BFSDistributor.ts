@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 import { cyanStr } from 'Console/ConsoleColor';
 import { RegularMiner, RegularMinerPath } from './Hack/RegularMiner';
-import { SingleTaskMiner, SingleTaskPath } from './Hack/SingleTaskMiner';
+import { SingleTaskMiner, SingleTaskMinerPath } from './Hack/SingleTaskMiner';
 import * as HackHelpers from './Hack/HackHelpers';
 import { IMiner } from './Hack/IMiner';
 class DistributorArgs {
@@ -27,9 +27,10 @@ export async function main(ns: NS) {
         ns.tprint(`ERROR: unkown target: ${args.target}`);
         ns.exit();
     }
-    const ScriptPath = args.miner === "RegularMiner" ? RegularMinerPath : SingleTaskPath;
+    const ScriptPath = args.miner === "RegularMiner" ? RegularMinerPath : SingleTaskMinerPath;
     const target = args.target;
-    const Tasks = [0, 1, 2, 1];//hack, weaken, grow, weaken
+    // const Tasks = [0, 1, 2, 1];//hack, weaken, grow, weaken
+    const Tasks = [2, 2, 2, 1, 1, 1, 0, 0];//grow, grow, grow, hack, hack, hack, weaken, weaken
     let curTaskId = 0;
     const m = ns.getScriptRam(ScriptPath);
     for (const currentHost of hosts.sorted) {
@@ -49,7 +50,7 @@ export async function main(ns: NS) {
             ns.print(`INFO:\t\t Required open ports: ${ns.getServerNumPortsRequired(currentHost)}`);
             continue;
         }
-        const miner: IMiner = MaxThreads > 0 ? (args.miner === "RegularMiner" ?
+        const miner: IMiner | null = MaxThreads > 0 ? (args.miner === "RegularMiner" ?
             new RegularMiner(ns, {
                 hostName: currentHost,
                 targetName: target,
@@ -59,26 +60,18 @@ export async function main(ns: NS) {
             new SingleTaskMiner(ns, {
                 hostName: currentHost,
                 targetName: target,
-                scriptPath: SingleTaskPath,
+                scriptPath: SingleTaskMinerPath,
                 threadOrOptions: Math.floor(M / m),
                 task: Tasks[curTaskId]
-            })) :
-            {
-                args: {
-                    hostName: currentHost,
-                    scriptPath: "MemSharer.js",
-                    targetName: target,
-                    threadOrOptions: MaxShareThread
-                },
-                ns: ns,
-                run: function (): number {
-                    // return this.ns.exec("MemSharer.js", target, MaxShareThread); $ Can't bind outside varaible, which then becomes undefined
-                    return this.ns.exec("MemSharer.js", target, this.args.threadOrOptions);
-                }
-            };
-        HackHelpers.TryHacking(ns, miner);
+            })) : null;
+        if (miner)
+            miner.run();
+        const shareT = Math.floor((ns.getServerMaxRam(currentHost) - ns.getServerUsedRam(currentHost)) / ns.getScriptRam("MemSharer.js"));
+        if (shareT > 0) {
+            ns.exec("MemSharer.js", currentHost, shareT);
+        }
         if (MaxThreads > 0 && args.miner === "SingleTaskMiner") {
-            curTaskId = (curTaskId + 1) % 4;
+            curTaskId = (curTaskId + 1) % Tasks.length;
         }
     }
 }

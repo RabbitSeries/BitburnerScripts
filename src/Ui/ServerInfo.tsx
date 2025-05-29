@@ -55,9 +55,10 @@ const ServerInfo = ({ servers, ns }: ServerInfoProps) => {
                         <th>%           </th>
                         <th>Security    </th>
                         <th>Hack Time   </th>
-                        <th>$/s         </th>
+                        <th>Current$/s  </th>
+                        <th>Potential$/s</th>
                         <th>Notes       </th>
-                        <th>RAM       </th>
+                        <th>RAM         </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,8 +74,9 @@ const ServerInfo = ({ servers, ns }: ServerInfoProps) => {
                             <td>{server.minSecurity}/{server.currentSecurity}</td>
                             <td>{server.hackTime}</td>
                             <td>{server.moneyPerHackTime}</td>
+                            <td>{ns.formatNumber(ns.getServerMaxMoney(server.hostname) / ns.getHackTime(server.hostname), 2)}</td>
                             <td>{ns.formatNumber(1000000)}</td>
-                            <td>{ns.formatNumber(ns.getServerMaxRam(server.hostname))}</td>
+                            <td>{ns.formatNumber(ns.getServerMaxRam(server.hostname) - ns.getServerUsedRam(server.hostname), 2)}/{ns.formatNumber(ns.getServerMaxRam(server.hostname), 2)}</td>
                         </tr>
                     ))}
                 </tbody>
