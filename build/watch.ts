@@ -1,12 +1,12 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const syncDirectory = require('sync-directory');
-const fg = require('fast-glob');
-const chokidar = require('chokidar');
-const { src, dist, allowedFiletypes } = require('./config');
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import syncDirectory from 'sync-directory';
+import FastGlob from 'fast-glob';
+import * as chokidar from 'chokidar';
+import { src, dist, allowedFiletypes } from './config.js';
 
 /** Format dist path for printing */
-function normalize(p) {
+function normalize(p: string) {
   return p.replace(/\\/g, '/');
 }
 
@@ -15,17 +15,16 @@ function normalize(p) {
  * Include init and watch phase.
  */
 async function syncStatic() {
-  return syncDirectory.async(path.resolve(src), path.resolve(dist), {
-    exclude: (file) => {
-      const { ext } = path.parse(file);
+  return syncDirectory(path.resolve(src), path.resolve(dist), {
+    exclude: [(filePath: string) => {
+      const { ext } = path.parse(filePath);
       return ext && !allowedFiletypes.includes(ext);
-    },
-    async afterEachSync(event) {
-      // log file action
-      let eventType;
-      if (event.eventType === 'add' || event.eventType === 'init:copy') {
+    }],
+    async afterEachSync(event: { eventType: string; nodeType: string; relativePath: string, srcPath: string; targetPath: string }) {
+      let eventType = event.eventType;
+      if (eventType === 'add' || eventType === 'init:copy') {
         eventType = 'changed';
-      } else if (event.eventType === 'unlink') {
+      } else if (eventType === 'unlink') {
         eventType = 'deleted';
       }
       if (eventType) {
@@ -46,7 +45,7 @@ async function syncStatic() {
  * Init phase only.
  */
 async function initTypeScript() {
-  const distFiles = await fg(`${dist}/**/*.js`);
+  const distFiles = await FastGlob(`${dist}/**/*.js`);
   for (const distFile of distFiles) {
     // search existing *.js file in dist
     const relative = path.relative(dist, distFile);

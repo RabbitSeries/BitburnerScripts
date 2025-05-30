@@ -1,0 +1,16 @@
+{
+    "extends": "./tsconfig.json",
+    "include": [
+        "build/**/*"
+    ],
+    "compilerOptions": {
+        "module": "esnext",
+        "target": "esnext",
+        "composite": true,
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "rootDir": "build/",
+        "outDir": "bin/",
+        "baseUrl": "build/",
+    }
+}

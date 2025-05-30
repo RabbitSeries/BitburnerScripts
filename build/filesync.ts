@@ -1,0 +1,19 @@
+const fileSyncJson = {
+  allowedFiletypes: [
+    ".js",
+    ".script",
+    ".txt"
+  ],
+  allowDeletingFiles: true,
+  port: 12525,
+  scriptsFolder: "dist",
+  quiet: false,
+  dry: false,
+  definitionFile: {
+    update: true,
+    location: "NetscriptDefinitions.d.ts"
+  },
+  pushAllOnConnection: false
+}
+
+export default fileSyncJson;
