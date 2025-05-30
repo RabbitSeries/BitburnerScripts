@@ -30,9 +30,7 @@ export async function main(ns: NS): Promise<void> {
             rawMoneyPerHackTime: moneyPerHackTime
         });
     }
-    ns.clearLog();
     ns.tprintRaw(<ServerInfo servers={formattedServers} ns={ns} />);
-    ns.tprint(`SUCCESS: DONE NETWORK PARSING`);
     while (true) {
         await ns.asleep(1000);
     }

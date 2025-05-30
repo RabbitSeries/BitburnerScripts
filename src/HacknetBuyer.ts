@@ -1,4 +1,5 @@
-import { NS } from "@ns";
+import { Hacknet, NS } from "@ns";
+import { cyanStr } from "./Console/ConsoleColor";
 
 async function upgradeLevelBy(ns: NS, nodeId: number, delta: number) {
     ns.print(`Upgrading ${nodeId} by ${delta}`);
@@ -71,7 +72,10 @@ export async function main(ns: NS) {
             }
             await ns.sleep(10000);
         }
-        ns.print(`Buying ${hacknet.numHashes()}_th/${hacknet.maxNumNodes()} node`);
+        ns.print(`Buying ${hacknet.numNodes()}_th/${hacknet.maxNumNodes()} node`);
+        await BuySomething(ns, cost, (ns) => { return ns.hacknet.purchaseNode() >= 0 }, 1000, () => {
+            ns.tprint(cyanStr(`Bought ${hacknet.numNodes()}_th/${hacknet.maxNumNodes()} node`));
+        })
         await ns.sleep(1000);
     }
     ns.print("Maximum nodes reached");

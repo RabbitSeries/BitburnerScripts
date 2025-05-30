@@ -27,22 +27,23 @@ export async function main(ns: NS) {
         ns.tprint(`ERROR: unkown target: ${args.target}`);
         ns.exit();
     }
+    if (!ns.hasRootAccess(args.target)) {
+        ns.tprint(`ERROR: no root access to target: ${args.target}`);
+        ns.exit();
+    }
     const ScriptPath = args.miner === "RegularMiner" ? RegularMinerPath : SingleTaskMinerPath;
     const target = args.target;
-    // const Tasks = [0, 1, 2, 1];//hack, weaken, grow, weaken
-    const Tasks = [2, 2, 2, 1, 1, 1, 0, 0];//grow, grow, grow, hack, hack, hack, weaken, weaken
+    const Tasks = [1,2];
     let curTaskId = 0;
     const m = ns.getScriptRam(ScriptPath);
     for (const currentHost of hosts.sorted) {
-        const U = ns.getServerUsedRam(currentHost),
-            M = ns.getServerMaxRam(currentHost),
-            R = M - U;
+        const U = ns.getServerUsedRam(currentHost), M = ns.getServerMaxRam(currentHost), R = M - U;
         const MaxThreads = Math.floor(M / m), MaxShareThread = Math.floor(M / ns.getScriptRam("MemSharer.js"));
         if (currentHost === "home") {
             continue;
         }
         if (!HackHelpers.TryNuke(ns, currentHost) || (MaxThreads === 0 && MaxShareThread === 0)) {
-            ns.tprint(`WARN:\t Failed to run scipt on traget ${cyanStr(currentHost)}, skipping`)
+            ns.print(`WARN:\t Failed to run scipt on traget ${cyanStr(currentHost)}, skipping`)
             ns.print(`WARN:\t Failed to run scipt on traget ${cyanStr(currentHost)}, skipping`)
             ns.print(`INFO:\t\t Has Root Access: ${ns.hasRootAccess(currentHost)}`);
             ns.print(`INFO:\t\t Required mem usage: ${m}(Ram)/${U}(Used)/${M}(Max)/${R}(Remain)/`);
@@ -64,14 +65,15 @@ export async function main(ns: NS) {
                 threadOrOptions: Math.floor(M / m),
                 task: Tasks[curTaskId]
             })) : null;
-        if (miner)
+        if (miner) {
             miner.run();
+            if (args.miner === "SingleTaskMiner") {
+                curTaskId = (curTaskId + 1) % Tasks.length;
+            }
+        }
         const shareT = Math.floor((ns.getServerMaxRam(currentHost) - ns.getServerUsedRam(currentHost)) / ns.getScriptRam("MemSharer.js"));
         if (shareT > 0) {
             ns.exec("MemSharer.js", currentHost, shareT);
-        }
-        if (MaxThreads > 0 && args.miner === "SingleTaskMiner") {
-            curTaskId = (curTaskId + 1) % Tasks.length;
         }
     }
 }
