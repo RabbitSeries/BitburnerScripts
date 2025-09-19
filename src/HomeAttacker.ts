@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from  "@ns"
 import { Paths } from "/Hack/Miners"
 const { SingleTaskMinerPath } = Paths
 export async function main(ns: NS) {

@@ -1,6 +1,6 @@
-import { NS } from "@ns"
-import React from "/lib/react";
-import { IServer } from "/Ui/Table/IServer"
+import type { NS } from "@ns";
+import React from "react";
+import type { IServer } from "/Ui/Table/IServer";
 import { CurrMoneyRate, PotentialMoneyRate } from "/utils/ServerStat";
 import { Tasks } from "/Hack/Tasks";
 import { BFSDistributor } from "/BFSDistributor";
@@ -48,22 +48,24 @@ export function Server(ns: NS, host: string, rowId: number): IServer {
                 BFSDistributor(ns, host, (from: string) => SProvider(ns, from, rowId, host, tasks)).then(stat => currentTarget.textContent = `Cycle[${stat ? '✔' : '✖'}]`)
             }}>{`Cycle[✖]`}
             </td>
-            <td key={`${host}BackDoor`} onMouseDown={({ currentTarget }) => {
-                new Promise((resolve, reject) => {
-                    if (ns.hasRootAccess(host)) {
-                        const pathToHost = FindPathTo(ns, host)
-                        if (pathToHost) {
-                            ns.tprint(pathToHost)
-                            for (const server of pathToHost) {
-                                ns.tprint(server, ns.singularity.connect(server))
-                            }
-                            resolve("Done")
-                            currentTarget.textContent = `BackDoor[✔]`
-                            return;
-                        }
-                    }
-                    reject("Invalid host")
-                }).then().catch(ns.tprint)
+            <td key={`${host}BackDoor`} onMouseDown={() => {
+                const pathToHost = FindPathTo(ns, host)
+                ns.tprint(pathToHost)
+                // new Promise(() => {
+                //     if (ns.hasRootAccess(host)) {
+                //         // if (pathToHost) {
+                //         //     ns.tprint(pathToHost)
+                //         //     for (const server of pathToHost) {
+                //         //         ns.tprint(server, ns.singularity.connect(server))
+                //         //     }
+                //         //     resolve("Done")
+                //         //     currentTarget.textContent = `BackDoor[✔]`
+                //         //     return;
+                //         // }
+                //     }
+                //     reject("Invalid host")
+                // }
+                // ).then().catch(ns.tprint)
             }}>{`BackDoor[✖]`}</td>
         </tbody >
     }

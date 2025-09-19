@@ -14,7 +14,7 @@ function normalize(p: string) {
  * Sync static files.
  * Include init and watch phase.
  */
-async function syncStatic() {
+export async function syncStatic() {
   return syncDirectory(path.resolve(src), path.resolve(dist), {
     exclude: [(filePath: string) => {
       const { ext } = path.parse(filePath);
@@ -45,7 +45,7 @@ async function syncStatic() {
  * Init phase only.
  */
 async function initTypeScript() {
-  const distFiles = await FastGlob(`${dist}/**/*.js`);
+  const distFiles = await FastGlob(`${dist}/**/*.js`, { ignore: [`${dist}/tmp/*`] });
   for (const distFile of distFiles) {
     // search existing *.js file in dist
     const relative = path.relative(dist, distFile);
@@ -82,11 +82,7 @@ async function watchTypeScript() {
  * Sync ts script files.
  * Include init and watch phase.
  */
-async function syncTypeScript() {
+export async function syncTypeScript() {
   await initTypeScript();
   return watchTypeScript();
 }
-
-console.log('Start watching static and ts files...');
-syncStatic();
-syncTypeScript();

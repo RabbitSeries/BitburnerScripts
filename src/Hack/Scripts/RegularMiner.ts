@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from "@ns"
 import { cyanStr } from "/Console/ConsoleColor"
 
 export async function main(ns: NS) {

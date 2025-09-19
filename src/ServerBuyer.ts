@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from "@ns"
 
 export async function main(ns: NS) {
     const ram = typeof ns.args[0] === "number" ? ns.args[0] : null

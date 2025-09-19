@@ -1,5 +1,5 @@
-import { NS } from "@ns"
-import React from "/lib/react"
+import type { NS } from "@ns";
+import React from "react"
 import { Server } from "/Ui/Table/Server";
 // import "./ServerNode.css"
 export default function ServerNode({ ns, host, rowId }: { ns: NS, host: string, rowId: number }) {

@@ -1,6 +1,6 @@
 
-import { NS, RunOptions } from "@ns"
-import { IMiner, IMinerArgs } from "/Hack/IMiner"
+import type { NS, RunOptions } from "@ns"
+import type { IMiner, IMinerArgs } from "/Hack/IMiner"
 import * as HackHelpers from "/Hack/HackHelpers"
 import { Tasks } from "/Hack/Tasks"
 

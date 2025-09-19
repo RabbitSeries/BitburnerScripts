@@ -1,4 +1,4 @@
-import { NS, RunOptions } from "@ns"
+import type { NS, RunOptions } from "@ns"
 export interface IMinerArgs {
     hostName: string,
     targetName: string | null,

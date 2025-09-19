@@ -1,0 +1,14 @@
+{
+	"include": [
+		"esbuild.ts",
+		"local/*.ts"
+	],
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "node",
+		"baseUrl": "local",
+		"sourceRoot": "./build",
+		"outDir": "./bin/",
+	}
+}

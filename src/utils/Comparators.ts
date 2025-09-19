@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from "@ns"
 import { CurrMoneyRate, PotentialMoneyRate } from "./ServerStat"
 type Sorter = (a: string, b: string) => number
 export class Comparator {

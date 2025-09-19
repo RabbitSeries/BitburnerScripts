@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from "@ns"
 import { cyanStr } from "/Console/ConsoleColor"
 import { Tasks } from "/Hack/Tasks"
 export async function main(ns: NS) {

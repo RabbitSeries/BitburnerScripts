@@ -13,7 +13,7 @@ const fileSyncJson = {
     update: true,
     location: "NetscriptDefinitions.d.ts"
   },
-  pushAllOnConnection: false
+  pushAllOnConnection: true
 }
 
 export default fileSyncJson;

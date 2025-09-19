@@ -1,5 +1,5 @@
-import { NS, ScriptArg } from "@ns"
-import { IMiner } from "./IMiner"
+import type { NS, ScriptArg } from "@ns"
+import type { IMiner } from "./IMiner"
 
 export function ScanAllServers(ns: NS) {
     const visited = new Set<string>()

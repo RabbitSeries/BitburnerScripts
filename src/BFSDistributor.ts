@@ -1,6 +1,6 @@
-import { NS } from '@ns'
+import type { NS } from '@ns'
 import * as HackHelpers from '/Hack/HackHelpers'
-import { IMiner } from '/Hack/IMiner'
+import type { IMiner } from '/Hack/IMiner'
 export type Provider = ((host: string) => IMiner | null) | IMiner | null
 function isFunctionProvider(provider: Provider): provider is (host: string) => IMiner | null {
     return typeof provider === 'function'

@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from "@ns"
 export function CurrMoneyRate(ns: NS, host: string) {
     return ns.getHackingMultipliers().money * ns.getServerMoneyAvailable(host) / (ns.getHackTime(host) / 1000)
 }

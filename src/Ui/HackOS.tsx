@@ -1,18 +1,16 @@
-import React from '/lib/react';
-import { upgradeLevelBy, upgradeLevelTo } from "/HacknetBuyer";
+import React from 'react';
 import type { NS } from "@ns";
 import { Comparator, RootAccessRank, CurrentMoneyRank, PotentialMoneyRank } from "/utils/Comparators";
 import ServerNode from '/Ui/Table/ServerNode';
-import { ScanAllServers, TryNuke } from '/Hack/HackHelpers';
-export default function HackOS({ servers, ns }: { servers: string[], ns: NS }) {
+import { Toolbar } from './Pallates/Toolbar';
+import type { ProcessHandle } from './OS/Process';
+export default function HackOS({ servers, ns, handle }: { servers: string[], ns: NS, handle: ProcessHandle }) {
     const rootAccessRanker = Comparator.sortBy(RootAccessRank.bind(ns));
     const [ranker, setRanker] = React.useState(rootAccessRanker.thenSortBy(CurrentMoneyRank.bind(ns)))
     const [rows, setRows] = React.useState(servers.sort(ranker.compare).slice(0, 10))
     const sorted = rows.toSorted(ranker.compare)
     const timer = React.useRef<HTMLDivElement>(null)
     const clickTimeOut = React.useRef<NodeJS.Timeout>(null);
-    const expander = React.useRef<HTMLButtonElement>(null);
-    const levelTo = React.useRef<HTMLDivElement>(null);
     const handleClick = (comparator: Comparator) => {
         if (clickTimeOut.current) {
             clickTimeOut.current = null;
@@ -44,39 +42,15 @@ export default function HackOS({ servers, ns }: { servers: string[], ns: NS }) {
     })
     return (
         <div className="multi-server-container">
-            <h2>Network Server Information (Sorted by Money/HackTime Efficiency)</h2>
+            <h2>Network Server Information</h2>
             <div ref={timer}>Nah</div>
-            <button ref={expander} onClick={() => {
-                if (expander.current) {
-                    if (expander.current.textContent === "Expand") {
-                        setRows(servers)
-                        expander.current.textContent = "Collapse"
-                    } else {
-                        setRows(sorted.slice(0, 10))
-                        expander.current.textContent = "Expand"
-                    }
+            <Toolbar ns={ns} handle={handle} callBack={(action) => {
+                if (action === "Expand") {
+                    setRows(servers)
+                } else {
+                    setRows(sorted.slice(0, 10))
                 }
-            }}>Expand</button>
-            <button onClick={() => {
-                for (const host of ScanAllServers(ns).valueset) {
-                    TryNuke(ns, host)
-                }
-            }}>NukeAll</button>
-            <button onClick={() => {
-                for (const id in [...Array(ns.hacknet.numNodes())]) {
-                    upgradeLevelBy(ns, +id, 1);
-                }
-            }}>UpgradeHackNode</button>
-            <button onClick={() => {
-                for (const id in [...Array(ns.hacknet.numNodes())]) {
-                    if (levelTo.current) {
-                        upgradeLevelTo(ns, +id, +levelTo.current.textContent);
-                    }
-                }
-            }}>UpgradeTo</button>
-            <button onClick={() => { if (levelTo.current) levelTo.current.textContent = `${Math.max(+(levelTo.current.textContent) - 1, 0)}` }}>-</button>
-            <button onClick={() => { if (levelTo.current) levelTo.current.textContent = `${+(levelTo.current.textContent) + 1}` }}>+</button>
-            <div ref={levelTo}>{Math.max(...[...Array(ns.hacknet.numNodes())].map((_, i) => i).map(i => ns.hacknet.getNodeStats(i).level))}</div>
+            }}></Toolbar>
             <table className="server-table">
                 <thead>
                     <tr>

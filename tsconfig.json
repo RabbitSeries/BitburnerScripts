@@ -1,46 +1,50 @@
 {
-  "include": [
-    "NetscriptDefinitions.d.ts",
-    "src/**/*"
-  ],
-  "exclude": [
-    "src/lib/react.ts"
-  ],
-  "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "moduleResolution": "node",
-    "noImplicitReturns": true,
-    "esModuleInterop": true,
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    // Type Checking
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "noImplicitThis": true,
-    "rootDir": "src/",
-    "outDir": "dist/",
-    "baseUrl": "src/",
-    "allowJs": true,
-    "jsx": "react",
-    "paths": {
-      "/*": [
-        "*"
-      ],
-      "@ns": [
-        "../NetscriptDefinitions.d.ts"
-      ],
-      "@react": [
-        "lib/react.ts"
-      ]
-    }
-  },
-  "references": [
-    {
-      "path": "./tsconfig.build.json"
-    }
-  ]
+	"files": [],
+	"include": [],
+	"compilerOptions": {
+		// Emit options
+		"target": "esnext",
+		"noEmit": true,
+		// Projects options (Incremental... options)
+		"composite": true,
+		// JavaScript Support
+		"allowJs": true,
+		// Modules
+		"module": "esnext",
+		"moduleResolution": "node",
+		// Interop Constraints
+		"esModuleInterop": true,
+		"verbatimModuleSyntax": true,
+		// "erasableSyntaxOnly": true, // error on enum, namespaces and modules with runtime code, parameter properties, Non-ECMAScript import = and export = assignments
+		// Type Checking
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedSideEffectImports": true,
+		"noImplicitThis": true,
+		// Editor Support
+		"disableSizeLimit": true,
+		// Completeness
+		"skipLibCheck": true,
+		"sourceMap": true,
+		// esbuild will read these
+		"baseUrl": "src",
+		"paths": {
+			"/*": [
+				"*"
+			],
+			"@ns": [
+				"../NetscriptDefinitions.d.ts"
+			],
+		}
+	},
+	"references": [
+		{
+			"path": "./tsconfig.local.json"
+		},
+		{
+			"path": "./tsconfig.HackOS.json"
+		}
+	]
 }

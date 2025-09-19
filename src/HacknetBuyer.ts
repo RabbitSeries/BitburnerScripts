@@ -1,4 +1,4 @@
-import { NS } from "@ns"
+import type { NS } from "@ns"
 
 export function upgradeLevelBy(ns: NS, nodeId: number, delta: number) {
     ns.print(`Upgrading ${nodeId} by ${delta}`)

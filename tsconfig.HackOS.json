@@ -1,0 +1,17 @@
+{
+    "include": [
+        "NetscriptDefinitions.d.ts",
+        "src/**/*"
+    ],
+    "exclude": [
+        "./src/lib/react.ts"
+    ],
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        // editor, debugger will read this
+        "baseUrl": "./src/",
+        "sourceRoot": "./src/",
+        "outDir": "./dist/",
+        "jsx": "react"
+    }
+}
