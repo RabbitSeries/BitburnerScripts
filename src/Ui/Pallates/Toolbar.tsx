@@ -3,8 +3,10 @@ import type { NS } from "@ns"
 import { FindPathTo, ScanAllServers, TryNuke } from "/Hack/HackHelpers"
 import { upgradeLevelBy, upgradeLevelTo } from "/HacknetBuyer"
 import type { ProcessHandle } from "../OS/Process"
-
-export function Toolbar({ ns, handle, callBack }: { ns: NS, handle: ProcessHandle, callBack: (action: 'Expand' | 'Collapse') => void }) {
+interface Notification {
+    action: 'Expand' | 'Collapse'
+}
+export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandle, notifier: (notification: Notification) => void }) {
     const expander = useRef<HTMLButtonElement>(null)
     const levelTo = useRef<HTMLDivElement>(null)
     const handlePrompt = () => {
@@ -14,10 +16,10 @@ export function Toolbar({ ns, handle, callBack }: { ns: NS, handle: ProcessHandl
         <button ref={expander} onClick={() => {
             if (expander.current) {
                 if (expander.current.textContent === "Expand") {
-                    callBack("Expand")
+                    notifier({ action: "Expand" })
                     expander.current.textContent = "Collapse"
                 } else {
-                    callBack("Collapse")
+                    notifier({ action: "Collapse" })
                     expander.current.textContent = "Expand"
                 }
             }

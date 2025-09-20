@@ -8,7 +8,7 @@ export async function main(ns: NS) {
         return
     }
     ns.print(`SUCCESS: Running in ${cyanStr(hostname)} targeting ${cyanStr(target)} with task ${task} `)
-    while (true) {
+    return new Promise<void>(async (resolve) => {
         const curMoneyAvailable = ns.getServerMoneyAvailable(target)
         if (curMoneyAvailable === 0) {
             ns.print(`WARN: Target(${target}) is drained`)
@@ -32,7 +32,7 @@ export async function main(ns: NS) {
             ns.print(`SUCCESS Grew from ${hostname}, targeting ${target} `)
         } else {
             ns.print(`ERROR: Runtime error SglMiner is not able to fectch a task, passed task is ${task} `)
-            return
+            resolve()
         }
-    }
+    })
 }
