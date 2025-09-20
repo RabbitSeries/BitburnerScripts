@@ -2,8 +2,8 @@
   "name": "bitburner-typescript-template",
   "version": "2.0.0",
   "scripts": {
-    "watch:transpile:init": "esbuild esbuild.ts ./local/*.ts --format=esm --platform=node --outdir=dist/tmp --sourcemap=inline",
-    "watch:transpile": "npm run watch:transpile:init && node ./dist/tmp/esbuild.js",
+    "watch:transpile:init": "esbuild esbuild.ts ./local/*.ts --format=esm --platform=node --outdir=tmp --sourcemap=inline",
+    "watch:transpile": "npm run watch:transpile:init && node ./tmp/esbuild.js",
     "watch:remote": "node ./bitburner-filesync/npx/bitburner-filesync.js",
     "watch:all": "concurrently npm:watch:transpile npm:watch:remote",
     "watch": "npm run watch:all"
@@ -19,7 +19,8 @@
     "concurrently": "^7.4.0",
     "esbuild": "^0.25.10",
     "eslint": "^9.35.0",
-    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
     "fast-glob": "^3.2.12",
     "globals": "^16.4.0",
     "jiti": "^2.5.1",

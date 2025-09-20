@@ -1,7 +1,6 @@
 import type { NS } from "@ns"
-
 export async function main(ns: NS) {
-    const ram = typeof ns.args[0] === "number" ? ns.args[0] : null
+    const ram = 2 ** 10
     if (ram) {
         let i = ns.getPurchasedServers().length
         ns.tprint(`Currently having ${i}/${ns.getPurchasedServerLimit()} servers`)
@@ -13,7 +12,7 @@ export async function main(ns: NS) {
                 await ns.sleep(10000)
             }
             ns.tprint(`Buying ${i}_th/${ns.getPurchasedServerLimit()} server`)
-            let hostname = ns.purchaseServer("pserv-" + i, ram)
+            const hostname = ns.purchaseServer("pserv-" + i, ram)
             if (ns.fileExists("Miner.js", "home")) {
                 ns.scp("Miner.js", hostname)
                 // Neighbors = ns.scan("home")

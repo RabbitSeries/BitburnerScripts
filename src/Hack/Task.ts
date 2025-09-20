@@ -1,4 +1,4 @@
-export enum Tasks {
+export enum HackTask {
     Hack,
     Weaken,
     Grow

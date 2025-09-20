@@ -1,6 +1,7 @@
 {
 	"include": [
 		"esbuild.ts",
+		"eslint.config.ts",
 		"local/*.ts"
 	],
 	"extends": "./tsconfig.json",

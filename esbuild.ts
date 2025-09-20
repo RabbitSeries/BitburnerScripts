@@ -4,6 +4,7 @@ import fg from "fast-glob"
 import { syncStatic, syncTypeScript } from "./local/watch.js"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import fs from "node:fs"
 const outDirectory = "dist"
 // Copied from https://github.com/shyguy1412/esbuild-bitburner-plugin
 export function reactPlugin(): Plugin {
@@ -66,6 +67,7 @@ const ctx = await context({
     entryPoints: fg.globSync(["./src/**/*"], {
         ignore: ["node_modules"]
     }),
+    tsconfig: "tsconfig.HackOS.json",
     platform: "browser",
     format: "esm",
     plugins: [reactPlugin()],
@@ -77,9 +79,9 @@ const ctx = await context({
     sourcemap: "inline",
     // treeShaking: true // true if bundle or format is iife
 })
-await ctx.watch()
+ctx.watch() // Why the following will still run even if I awaited?
+fs.rmSync("./tmp", { recursive: true, force: true })
 console.log('Watching changes')
-
 console.log('Start watching static and ts files...')
 syncStatic()
 syncTypeScript()

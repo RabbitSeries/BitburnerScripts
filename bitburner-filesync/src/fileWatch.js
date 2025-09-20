@@ -2,6 +2,7 @@ import CheapWatch from "cheap-watch";
 import { config } from "./config.js";
 import { EventType } from "./eventTypes.js";
 import { resolve } from "path";
+import { existsSync, mkdirSync } from "fs";
 
 function fileFilter(file) {
     if (config.get("allowedFiletypes").some(extension => file.path.endsWith(extension)))
@@ -12,6 +13,9 @@ function fileFilter(file) {
 }
 
 export async function setupWatch(signaller) {
+    if (!existsSync(config.get("scriptsFolder"))) {
+        mkdirSync(config.get("scriptsFolder"))
+    }
     const watch = new CheapWatch({
         dir: config.get("scriptsFolder"),
         filter: fileFilter,

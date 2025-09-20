@@ -1,5 +1,6 @@
 import type { NS, ScriptArg } from "@ns"
 import type { IMiner } from "./IMiner"
+import { MemSharer, Miners } from "./Miners"
 
 export function ScanAllServers(ns: NS) {
     const visited = new Set<string>()
@@ -27,39 +28,38 @@ export function TryNuke(ns: NS, target: string) {
     }
     try {
         ns.brutessh(target)
-    } catch { }
+    } catch {/*  */ }
     try {
         ns.ftpcrack(target)
-    } catch { }
+    } catch { /*  */ }
     try {
         ns.httpworm(target)
-    } catch { }
+    } catch {/*  */ }
     try {
         ns.sqlinject(target)
-    } catch { }
+    } catch {/*  */ }
     try {
         ns.nuke(target)
-    } catch { }
+    } catch { /*  */ }
     return ns.hasRootAccess(target)
 }
 
 
 export function TryHacking(ns: NS, miner: IMiner, ...args: ScriptArg[]): number {
-    const scriptPath = miner.scriptPath, currentHost = miner.args.hostName, target = miner.args.targetName, threadOptions = miner.args.threadOrOptions
-    let status = 0
+    const scriptPath = miner.scriptPath, currentHost = miner.args.hostName, target = miner.args.targetName, threadOptions = miner.threadOptions
+    if (typeof threadOptions === "number" && threadOptions === 0) {
+        return 0
+    }
     try {
-        ns.killall(currentHost)
-        Scp(ns, currentHost)
-        status = ns.exec(scriptPath, currentHost, threadOptions, ...args)
+        Scp(ns, miner.args.hostName)
+        const result = ns.exec(scriptPath, currentHost, threadOptions, ...args)
+        ns.print(`SUCCESS: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions} at ${result}`)
+        return result;
     } catch (e) {
         ns.print(`ERROR: Fatal error: ${e instanceof Error ? e.message : String(e)}`)
-    }
-    if (status) {
-        ns.print(`SUCCESS: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`)
-    } else {
         ns.print(`FAILED: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`)
+        return 0
     }
-    return status
 }
 
 export function FindPathTo(ns: NS, target: string): string[] | null {
@@ -90,6 +90,21 @@ export function FindPathTo(ns: NS, target: string): string[] | null {
     return null
 }
 
-function Scp(ns: NS, destination: string): boolean {
-    return ns.scp(ns.ls("home").filter((path) => path.endsWith(".js")), destination)
+export function Scp(ns: NS, destination: string): boolean {
+    return ns.scp(ns.ls("home").filter(path => path.endsWith(".js")), destination)
+}
+
+export const ShareOn = (ns: NS, host: string, time?: number): Promise<boolean> => {
+    return new Promise((resolve) => {
+        ns.scriptKill(Miners.MemSharer.scriptPath, host)
+        new MemSharer(ns, host, Math.floor((ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam(Miners.MemSharer.scriptPath))).run()
+        if (time !== undefined) {
+            setTimeout(() => {
+                ns.scriptKill(Miners.MemSharer.scriptPath, host)
+                resolve(true)
+            }, time)
+        } else {
+            resolve(true)
+        }
+    })
 }

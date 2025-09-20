@@ -28,16 +28,6 @@
 		// Completeness
 		"skipLibCheck": true,
 		"sourceMap": true,
-		// esbuild will read these
-		"baseUrl": "src",
-		"paths": {
-			"/*": [
-				"*"
-			],
-			"@ns": [
-				"../NetscriptDefinitions.d.ts"
-			],
-		}
 	},
 	"references": [
 		{

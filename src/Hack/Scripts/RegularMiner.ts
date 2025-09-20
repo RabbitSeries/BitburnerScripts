@@ -1,9 +1,8 @@
 import type { NS } from "@ns"
 import { cyanStr } from "/Console/ConsoleColor"
-
 export async function main(ns: NS) {
     const hostname: string = ns.args[0].toString(), target = ns.args[1].toString()
-    const initialMoney = ns.getServerMoneyAvailable(target)
+    const initialMoney = ns.getServerMaxMoney(target) * 0.8
     const securityThresh = ns.getServerMinSecurityLevel(target) * 1.2
     if (!ns.hasRootAccess(target)) {
         ns.print("ERROR: No root access to target")
@@ -15,7 +14,6 @@ export async function main(ns: NS) {
         if (curMoneyAvailable === 0) {
             ns.print(`WARN: Target(${target}) is drained`)
         }
-        ns.print('')
         ns.print(`INFO Targeting: ${target}`)
         ns.print(`INFO Current security level at: ${cyanStr(`${curSecurityLevel}/${securityThresh}`)}`)
         if (curSecurityLevel > securityThresh) {

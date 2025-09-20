@@ -1,11 +1,8 @@
 import type { NS } from '@ns'
 import * as HackHelpers from '/Hack/HackHelpers'
 import type { IMiner } from '/Hack/IMiner'
-export type Provider = ((host: string) => IMiner | null) | IMiner | null
-function isFunctionProvider(provider: Provider): provider is (host: string) => IMiner | null {
-    return typeof provider === 'function'
-}
-export async function BFSDistributor(ns: NS, target: string, provider: Provider) {
+import { isFunctionProvider, type MinerProvider } from './Hack/Providers'
+export async function BFSDistributor(ns: NS, target: string, provider: MinerProvider) {
     const hosts = HackHelpers.ScanAllServers(ns)
     if (!hosts.valueset.has(target)) {
         ns.tprint(`ERROR: unkown target: ${target}`)
@@ -15,21 +12,21 @@ export async function BFSDistributor(ns: NS, target: string, provider: Provider)
         ns.tprint(`ERROR: no root access to target: ${target}`)
         return false
     }
-    for (const currentHost of hosts.sorted) {
+    hosts.sorted.filter(s => ns.hasRootAccess(s) && ns.getServerMaxRam(s) > 0).map((currentHost) => {
         let miner: IMiner | null = null
-        if (isFunctionProvider(provider)) {
-            miner = provider(currentHost)
+        if (isFunctionProvider(provider.next)) {
+            miner = provider.next({
+                hostName: currentHost,
+                targetName: target
+            })
         } else {
-            miner = provider
+            miner = provider.next
         }
+        ns.killall(currentHost)
         if (miner) {
             miner.run()
         }
-        const U = ns.getServerUsedRam(currentHost), M = ns.getServerMaxRam(currentHost)
-        const shareT = Math.floor((M - U) / ns.getScriptRam("MemSharer.js"))
-        if (shareT > 0) {
-            ns.exec("MemSharer.js", currentHost, shareT)
-        }
-    }
+        HackHelpers.ShareOn(ns, currentHost)
+    })
     return true
 }

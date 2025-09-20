@@ -12,6 +12,15 @@
         "baseUrl": "./src/",
         "sourceRoot": "./src/",
         "outDir": "./dist/",
-        "jsx": "react"
+        "jsx": "react",
+        // esbuild will read these
+        "paths": {
+            "/*": [
+                "*"
+            ],
+            "@ns": [
+                "../NetscriptDefinitions.d.ts"
+            ],
+        }
     }
 }

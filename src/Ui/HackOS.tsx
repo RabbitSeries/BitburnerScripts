@@ -1,35 +1,17 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { NS } from "@ns";
-import { Comparator, RootAccessRank, CurrentMoneyRank, PotentialMoneyRank } from "/utils/Comparators";
-import ServerNode from '/Ui/Table/ServerNode';
+import { Comparator, RootAccessRank, CurrentMoneyRateRank } from "/utils/Comparators";
+import ServerNode from './ServerTable/ServerInfo';
 import { Toolbar } from './Pallates/Toolbar';
 import type { ProcessHandle } from './OS/Process';
+import { TableHeader } from './ServerTable/TableHeader';
 export default function HackOS({ servers, ns, handle }: { servers: string[], ns: NS, handle: ProcessHandle }) {
-    const [rootAccessRanker] = useState(Comparator.sortBy(RootAccessRank.bind(ns)))
-    const [ranker, setRanker] = useState(rootAccessRanker.thenSortBy(CurrentMoneyRank.bind(ns)))
+    const { current: rootAccessRanker } = useRef(Comparator.sortBy(RootAccessRank.bind(ns)))
+    const [ranker, setRanker] = useState(rootAccessRanker.thenSortBy(CurrentMoneyRateRank.bind(ns)))
     const [rows, setRows] = useState(servers.sort(ranker.compare).slice(0, 10))
     const timer = useRef<HTMLDivElement>(null)
-    const clickTimeOut = useRef<NodeJS.Timeout>(null)
     const sorted = rows.toSorted(ranker.compare)
     const refreshHandle = useRef<NodeJS.Timeout>(null)
-    const handleClick = useCallback((comparator: Comparator) => {
-        if (clickTimeOut.current) {
-            clickTimeOut.current = null;
-            return new Promise<Comparator>((resolve) => {
-                resolve(comparator.reversed())
-            });
-        }
-        return new Promise<Comparator>((resolve, reject) => {
-            clickTimeOut.current = setTimeout(() => {
-                if (clickTimeOut.current === null) {
-                    reject("Double clicked or clicked status lost");
-                } else {
-                    resolve(comparator)
-                }
-                clickTimeOut.current = null;
-            }, 200)
-        })
-    }, [])
     useEffect(() => {
         refreshHandle.current = setInterval(() => {
             if (timer.current) {
@@ -52,29 +34,12 @@ export default function HackOS({ servers, ns, handle }: { servers: string[], ns:
                     }
                     handle.close()
                 }
-            }} notifier={({ action }) => setRows(action === "Expand" ? servers : sorted.slice(0, 10))}></Toolbar>
+            }} notifier={({ action }) => setRows(action === "Expand" ? servers : sorted.slice(0, 10))} />
             <table className="server-table">
-                <thead>
-                    <tr>
-                        <th>Rank </th>
-                        <th>Server </th>
-                        <th onClick={() => handleClick(rootAccessRanker).then(setRanker).catch(ns.print)}>Root </th>
-                        <th>Hack Level </th>
-                        <th>Ports </th>
-                        <th>Money </th>
-                        <th>Security </th>
-                        <th>HWG Time/mins </th>
-                        {[
-                            { n: "Current$/s", r: rootAccessRanker.thenSortBy(CurrentMoneyRank.bind(ns)) },
-                            { n: "Potential$/s", r: rootAccessRanker.thenSortBy(PotentialMoneyRank.bind(ns)) }]
-                            .map(({ n, r }) => <th onClick={() => handleClick(r).then(setRanker).catch(ns.print)}>{n} </th>)}
-                        <th>RAM </th>
-                        <th style={{ textAlign: "center" }}>Action </th>
-                    </tr>
-                </thead>
+                <TableHeader ns={ns} setRanker={setRanker} />
                 <tbody>
                     {sorted.map((host, rowId) => {
-                        return (<ServerNode ns={ns} host={host} rowId={rowId + 1}></ServerNode>)
+                        return (<ServerNode key={host} ns={ns} host={host} rowId={rowId + 1}></ServerNode>)
                     })}
                 </tbody>
             </table>

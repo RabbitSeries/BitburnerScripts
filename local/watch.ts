@@ -15,6 +15,9 @@ function normalize(p: string) {
  * Include init and watch phase.
  */
 export async function syncStatic() {
+  if (!fs.existsSync(dist)) {
+    fs.mkdirSync(dist)
+  }
   return syncDirectory(path.resolve(src), path.resolve(dist), {
     exclude: [(filePath: string) => {
       const { ext } = path.parse(filePath);
