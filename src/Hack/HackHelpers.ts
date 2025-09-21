@@ -27,20 +27,23 @@ export function TryNuke(ns: NS, target: string) {
         return true
     }
     try {
+        ns.nuke(target)
+    } catch { /*  */ }
+    try {
         ns.brutessh(target)
     } catch {/*  */ }
     try {
         ns.ftpcrack(target)
     } catch { /*  */ }
     try {
+        ns.relaysmtp(target)
+    } catch {/*  */ }
+    try {
         ns.httpworm(target)
     } catch {/*  */ }
     try {
         ns.sqlinject(target)
     } catch {/*  */ }
-    try {
-        ns.nuke(target)
-    } catch { /*  */ }
     return ns.hasRootAccess(target)
 }
 

@@ -79,7 +79,7 @@ const ctx = await context({
     sourcemap: "inline",
     // treeShaking: true // true if bundle or format is iife
 })
-ctx.watch() // Why the following will still run even if I awaited?
+/* await */ ctx.watch() // Why the following will still run even if I awaited?
 fs.rmSync("./tmp", { recursive: true, force: true })
 console.log('Watching changes')
 console.log('Start watching static and ts files...')

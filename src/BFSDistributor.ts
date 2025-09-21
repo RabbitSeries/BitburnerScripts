@@ -1,32 +1,23 @@
 import type { NS } from '@ns'
 import * as HackHelpers from '/Hack/HackHelpers'
-import type { IMiner } from '/Hack/IMiner'
 import { isFunctionProvider, type MinerProvider } from './Hack/Providers'
-export async function BFSDistributor(ns: NS, target: string, provider: MinerProvider) {
+export async function BFSDistributor(ns: NS, targetName: string, provider: MinerProvider) {
     const hosts = HackHelpers.ScanAllServers(ns)
-    if (!hosts.valueset.has(target)) {
-        ns.tprint(`ERROR: unkown target: ${target}`)
+    if (!hosts.valueset.has(targetName)) {
+        ns.tprint(`ERROR: unkown target: ${targetName}`)
         return false
     }
-    if (!ns.hasRootAccess(target)) {
-        ns.tprint(`ERROR: no root access to target: ${target}`)
+    if (!ns.hasRootAccess(targetName)) {
+        ns.tprint(`ERROR: no root access to target: ${targetName}`)
         return false
     }
-    hosts.sorted.filter(s => ns.hasRootAccess(s) && ns.getServerMaxRam(s) > 0).map((currentHost) => {
-        let miner: IMiner | null = null
-        if (isFunctionProvider(provider.next)) {
-            miner = provider.next({
-                hostName: currentHost,
-                targetName: target
-            })
-        } else {
-            miner = provider.next
-        }
-        ns.killall(currentHost)
+    hosts.sorted.filter(s => ns.hasRootAccess(s) && ns.getServerMaxRam(s) > 0).map((hostName) => {
+        ns.killall(hostName)
+        const miner = isFunctionProvider(provider.next) ? provider.next({ hostName, targetName }) : provider.next
         if (miner) {
             miner.run()
         }
-        HackHelpers.ShareOn(ns, currentHost)
+        HackHelpers.ShareOn(ns, hostName)
     })
     return true
 }

@@ -10,6 +10,6 @@
 		"moduleResolution": "node",
 		"baseUrl": "local",
 		"sourceRoot": "./build",
-		"outDir": "./bin/",
+		"outDir": "./tmp/",
 	}
 }

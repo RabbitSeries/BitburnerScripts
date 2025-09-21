@@ -3,8 +3,11 @@ import type { NS } from "@ns"
 import { FindPathTo, ScanAllServers, TryNuke } from "/Hack/HackHelpers"
 import { upgradeLevelBy, upgradeLevelTo } from "/HacknetBuyer"
 import type { ProcessHandle } from "../OS/Process"
-import { Miners, RegularMiner } from "/Hack/Miners"
+import { Miners, RegularMiner, SingleTaskMiner } from "/Hack/Miners"
 import { PuchaseServer } from "/Hack/PrivateServer"
+import { BeginSmartDistributor, Distributors } from "/Hack/Distributors"
+import { HackTask } from "/Hack/Task"
+import { PotentialMoneyRank } from "/utils/Comparators"
 interface Notification {
     action: 'Expand' | 'Collapse'
 }
@@ -51,15 +54,15 @@ export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandl
         <button onClick={() => { if (levelTo.current) levelTo.current.textContent = `${Math.min(+(levelTo.current.textContent) + 1, 200)}` }}>+</button>
         {/* There seems to be multiple affect to this label's textcontent. (TODO: this behavior seems to be called referential equality, go check it out!)
             The parent is periodically refreshing all nodes.
-            So this label's default value on every refresh.
+            So this label's default value evaluates on every refresh.
             Each time refresh to maxLevel.
             But this label is also bind to ref.
             So the diff alogrithm will also diff this lable's ref.
-            So the label's text content will change if either of the following changes:
+            So the label's textcontent will change if either of the following changes:
                 - maxLevel's returned value
                 - levelTo ref's current.textcontent
             if neither changes, content remains unchanged.
-            After changed the content stays the either refreshed value, it won't affect ref's value
+            After changed the content stays the at either of the refreshed value, which won't affect ref's value
         */}
         <label ref={levelTo} onClick={async ({ currentTarget }) =>
             currentTarget.textContent = `${Math.max(Math.min(+`${await ns.prompt("Upgrade to: ", { type: "text" })}`, 200), 0)}`}>{maxLevel()}</label>
@@ -67,12 +70,28 @@ export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandl
             Find Path
         </button>
         <button onClick={() => handle.close()}>Shut Down</button>
-        <button onClick={() => ns.prompt("Specify target", { type: "text" }).then(r => `${r}`).then(r => {
-            new RegularMiner(ns, {
-                hostName: "home",
-                targetName: r,
-                threadOptions: Math.floor((ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) / ns.getScriptRam(Miners.RegularMiner.scriptPath))
-            }).run()
+        <button onClick={() => ns.prompt("Specify target", { type: "select", choices: ScanAllServers(ns).sorted.toSorted(PotentialMoneyRank(ns).compare) }).then(r => `${r}`).then(async (targetName) => {
+            ns.prompt("Specify Miner", { type: "select", choices: [Miners.RegularMiner.scriptPath, Miners.SingleTaskMiner.scriptPath, Distributors.SmartDistributor.scriptPath] }).then(async (choice) => {
+                if (choice === Miners.RegularMiner.scriptPath) {
+                    new RegularMiner(ns, {
+                        hostName: "home",
+                        targetName,
+                        threadOptions: Math.floor((ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) / ns.getScriptRam(Miners.RegularMiner.scriptPath))
+                    }).run()
+                }
+                else if (choice === Miners.SingleTaskMiner.scriptPath) {
+                    new SingleTaskMiner(ns, {
+                        hostName: "home",
+                        targetName,
+                        task: +await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack.toString(), HackTask.Weaken.toString(), HackTask.Grow.toString()] })
+                    }).run()
+                } else if (choice === Distributors.SmartDistributor.scriptPath) {
+                    BeginSmartDistributor(ns, ["home"], targetName).catch(ns.tprint)
+                } else {
+                    return
+                }
+                ns.tprint("Started " + choice)
+            })
         }).catch(ns.tprint)}>Use Home Resources</button>
         <button onClick={() => PuchaseServer(ns).then(ns.tprint).catch(ns.tprint)}>Purchase a server</button>
     </div>

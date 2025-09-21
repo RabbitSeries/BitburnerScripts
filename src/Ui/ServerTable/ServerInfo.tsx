@@ -42,8 +42,8 @@ export function Server(ns: NS, host: string, rowId: number): IServer {
             <td>{ns.formatNumber(stat.weakenTime / 1000 / 60, 1)} </td>
             <td>{ns.formatNumber(stat.growTIme / 1000 / 60, 1)}</td>
         </tbody>,
-        CurrMoneyRate: <td>{ns.formatNumber(CurrMoneyRate(ns, host), 1)}</td>,
-        PotentialMoneyRate: <td>{ns.formatNumber(PotentialMoneyRate(ns, host), 1)}</td>,
+        CurrMoneyRate: <td>{ns.formatNumber(CurrMoneyRate.bind(ns)(host), 1)}</td>,
+        PotentialMoneyRate: <td>{ns.formatNumber(PotentialMoneyRate.bind(ns)(host), 1)}</td>,
         RAM: <td>{`${ns.formatNumber(stat.maxRam - stat.usedRam, 2)}/${ns.formatNumber(stat.maxRam, 2)}`}</td>,
         // Add a key to this, so the diff algorithm won't recreate new content for it
         Actions: <Actions key={host} host={host} ns={ns} ></Actions>

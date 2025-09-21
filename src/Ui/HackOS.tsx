@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { NS } from "@ns";
-import { Comparator, RootAccessRank, CurrentMoneyRateRank } from "/utils/Comparators";
+import { RootAccessRank, CurrentMoneyRateRank } from "/utils/Comparators";
 import ServerNode from './ServerTable/ServerInfo';
 import { Toolbar } from './Pallates/Toolbar';
 import type { ProcessHandle } from './OS/Process';
 import { TableHeader } from './ServerTable/TableHeader';
 export default function HackOS({ servers, ns, handle }: { servers: string[], ns: NS, handle: ProcessHandle }) {
-    const { current: rootAccessRanker } = useRef(Comparator.sortBy(RootAccessRank.bind(ns)))
-    const [ranker, setRanker] = useState(rootAccessRanker.thenSortBy(CurrentMoneyRateRank.bind(ns)))
+    const { current: rootAccessRanker } = useRef(RootAccessRank(ns))
+    const [ranker, setRanker] = useState(rootAccessRanker.thenSortBy(CurrentMoneyRateRank(ns).compare))
     const [rows, setRows] = useState(servers.sort(ranker.compare).slice(0, 10))
     const timer = useRef<HTMLDivElement>(null)
     const sorted = rows.toSorted(ranker.compare)
