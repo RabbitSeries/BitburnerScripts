@@ -46,8 +46,10 @@ You may want to use an isolated docker container for the Remote API instead of i
 
    ```docker build -t bitburner-typescript .```
 
+
 - Enter the following command to run the bitburner-filesync container using the bitburner-typescript image created above:
 
+  ```docker run --rm -d -v "$($pwd)/src:/app/src" -v "$($pwd)/NetscriptDefinitions.d.ts:/app/NetscriptDefinitions.d.ts" -p 12525:12525 --name bitburner-filesync bitburner-typescript```
   ```docker run --rm -d -v "$($pwd)/src:/app/src" -v "$($pwd)/NetscriptDefinitions.d.ts:/app/NetscriptDefinitions.d.ts" -p 12525:12525 --name bitburner-filesync bitburner-typescript```
 
 > NOTE: In a PowerShell terminal the `$($pwd)` resolves to the current directory but you can modify the command with full file path to the src directory if required.\
