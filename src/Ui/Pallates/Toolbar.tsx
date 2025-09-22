@@ -3,15 +3,16 @@ import type { NS } from "@ns"
 import { FindPathTo, ScanAllServers, TryNuke } from "/Hack/HackHelpers"
 import { upgradeLevelBy, upgradeLevelTo } from "/HacknetBuyer"
 import type { ProcessHandle } from "../OS/Process"
-import { Miners, RegularMiner, SingleTaskMiner } from "/Hack/Miners"
-import { PuchaseServer } from "/Hack/PrivateServer"
-import { BeginSmartDistributor, Distributors } from "/Hack/Distributors"
-import { HackTask } from "/Hack/Task"
-import { PotentialMoneyRank } from "/utils/Comparators"
+import { MemSharer, Miners, RegularMiner, SingleTaskMiner } from "../../Hack/Miners/Miners"
+import { HackTask } from "/Hack/HackHelpers"
+import { type Sorter } from "/utils/Comparators"
+import { FreeRam } from "/utils/ServerStat"
+import { FullScheduler } from "../../Hack/Schedulers/Schedulers"
+import { PuchaseServer } from "/ServerBuyer"
 interface Notification {
     action: 'Expand' | 'Collapse'
 }
-export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandle, notifier: (notification: Notification) => void }) {
+export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: ProcessHandle, notifier: (notification: Notification) => void, ranker: Sorter<string> }) {
     const expander = useRef<HTMLButtonElement>(null)
     const levelTo = useRef<HTMLLabelElement>(null)
     const { current: maxLevel } = useRef<() => number>(() => {
@@ -66,12 +67,17 @@ export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandl
         */}
         <label ref={levelTo} onClick={async ({ currentTarget }) =>
             currentTarget.textContent = `${Math.max(Math.min(+`${await ns.prompt("Upgrade to: ", { type: "text" })}`, 200), 0)}`}>{maxLevel()}</label>
-        <button onClick={() => ns.prompt('Print path to: ', { type: "text" }).then(r => FindPathTo(ns, `${r}`)).then(r => ns.alert(`${r ? r.map(r => `connect ${r}`).join(";") : "NULL"}`)).catch()}>
+        <button onClick={() => ns.prompt('Print path to: ', { type: "text" })
+            .then(r => FindPathTo(ns, `${r}`))
+            .then(r => ns.alert(`${r ? `home;${r.map(r => `connect ${r}`).join(";")};backdoor` : "NULL"}`)).catch()}>
             Find Path
         </button>
         <button onClick={() => handle.close()}>Shut Down</button>
-        <button onClick={() => ns.prompt("Specify target", { type: "select", choices: ScanAllServers(ns).sorted.toSorted(PotentialMoneyRank(ns).compare) }).then(r => `${r}`).then(async (targetName) => {
-            ns.prompt("Specify Miner", { type: "select", choices: [Miners.RegularMiner.scriptPath, Miners.SingleTaskMiner.scriptPath, Distributors.SmartDistributor.scriptPath] }).then(async (choice) => {
+        <button onClick={() => ns.prompt("Specify target", { type: "select", choices: ScanAllServers(ns).sorted.toSorted(ranker) }).then(r => `${r}`).then(async (targetName) => {
+            if (targetName.length === 0) {
+                return
+            }
+            ns.prompt("Specify Miner", { type: "select", choices: [Miners.RegularMiner.scriptPath, Miners.SingleTaskMiner.scriptPath, "FullScheduler"] }).then(async (choice) => {
                 if (choice === Miners.RegularMiner.scriptPath) {
                     new RegularMiner(ns, {
                         hostName: "home",
@@ -85,8 +91,9 @@ export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandl
                         targetName,
                         task: +await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack.toString(), HackTask.Weaken.toString(), HackTask.Grow.toString()] })
                     }).run()
-                } else if (choice === Distributors.SmartDistributor.scriptPath) {
-                    BeginSmartDistributor(ns, ["home"], targetName).catch(ns.tprint)
+                } else if (choice === "FullScheduler") {
+                    // This will stuck the game, don't know why
+                    FullScheduler.attach(ns, targetName, ["home"], () => { }, () => { }).catch(ns.tprint)
                 } else {
                     return
                 }
@@ -94,5 +101,14 @@ export function Toolbar({ ns, handle, notifier }: { ns: NS, handle: ProcessHandl
             })
         }).catch(ns.tprint)}>Use Home Resources</button>
         <button onClick={() => PuchaseServer(ns).then(ns.tprint).catch(ns.tprint)}>Purchase a server</button>
+        <button onClick={async () => {
+            for (const host of ["home", ...ScanAllServers(ns).sorted]) {
+                if (host !== "home") {
+                    ns.killall(host)
+                }
+                const thread = Math.floor(FreeRam.bind(ns)(host) / ns.getScriptRam(Miners.MemSharer.scriptPath))
+                new MemSharer(ns, host, thread).run()
+            }
+        }}>Share mem</button>
     </div>
 }

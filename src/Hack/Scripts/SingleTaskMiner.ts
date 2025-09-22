@@ -1,6 +1,6 @@
 import type { NS } from "@ns"
 import { cyanStr } from "/Console/ConsoleColor"
-import { HackTask } from "../Task"
+import { HackTask } from "../HackHelpers"
 export async function main(ns: NS) {
     const target = ns.args[0].toString(), task = ns.args[1].valueOf()
     if (!ns.hasRootAccess(target)) {

@@ -27,14 +27,16 @@ export default function HackOS({ servers, ns, handle }: { servers: string[], ns:
         <div className="multi-server-container">
             <h2>Network Server Information</h2>
             <div ref={timer}>Nah</div>
-            <Toolbar ns={ns} handle={{
-                close: () => {
-                    if (refreshHandle.current) {
-                        clearInterval(refreshHandle.current)
+            <Toolbar ns={ns} notifier={({ action }) => setRows(action === "Expand" ? servers : sorted.slice(0, 10))} ranker={ranker.compare}
+                handle={{
+                    close: () => {
+                        if (refreshHandle.current) {
+                            clearInterval(refreshHandle.current)
+                        }
+                        handle.close()
                     }
-                    handle.close()
-                }
-            }} notifier={({ action }) => setRows(action === "Expand" ? servers : sorted.slice(0, 10))} />
+                }}
+            />
             <table className="server-table">
                 <TableHeader ns={ns} setRanker={setRanker} />
                 <tbody>

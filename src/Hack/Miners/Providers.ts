@@ -1,6 +1,6 @@
 import type { NS } from "@ns"
 import { SingleTaskMiner, RegularMiner } from "./Miners"
-import type { HackTask } from "./Task"
+import type { HackTask } from "../HackHelpers"
 import type { IMiner, IMinerArgs } from "./IMiner"
 export interface MinerProvider {
     next: ((args: IMinerArgs) => IMiner | null) | IMiner | null

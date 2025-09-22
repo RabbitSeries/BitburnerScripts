@@ -1,6 +1,6 @@
 import type { NS } from "@ns"
 import { CurrMoneyRate, PotentialMoneyRate } from "./ServerStat"
-type Sorter<T> = (a: T, b: T) => number
+export type Sorter<T> = (a: T, b: T) => number
 export class Comparator<T> {
     public static comparing<T>(cmp: (a: T) => number) {
         return Comparator.sortBy<T>((a, b) => cmp(a) - cmp(b))

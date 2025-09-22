@@ -35,7 +35,7 @@ export function Server(ns: NS, host: string, rowId: number): IServer {
         Root: <td>{ns.hasRootAccess(host) ? '✔' : '✖'}</td>,
         HackLevel: <td>{ns.getHackingLevel()}/{ns.getServerRequiredHackingLevel(host)}</td>,
         Ports: <td>{ns.getServerNumPortsRequired(host)}</td>,
-        Money: <td>{ns.formatNumber(stat.moneyAvailable, 1)}/{ns.formatNumber(stat.maxMoney, 1)}{`\t(${stat.maxMoney ? ns.formatPercent(stat.moneyAvailable / stat.maxMoney, 1) : "N/A"})\t`}</td>,
+        Money: <td>{ns.formatNumber(stat.moneyAvailable, 1)}/{ns.formatNumber(stat.maxMoney, 1)}{`(${stat.maxMoney ? ns.formatPercent(stat.moneyAvailable / stat.maxMoney, 1) : "N/A"})`}</td>,
         Secrurity: <td>{ns.formatNumber(stat.minSecurity, 0)}/{ns.formatNumber(stat.curSecurity, 1)}</td>,
         HackTime: <tbody>
             <td>{ns.formatNumber(stat.hackTime / 1000 / 60, 1)} </td>

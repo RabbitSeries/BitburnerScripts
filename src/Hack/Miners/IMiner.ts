@@ -12,5 +12,3 @@ export interface IMiner {
     threadOptions: number | RunOptions
     run: () => number
 }
-
-export const IMinerPath = "Hack/IMiner.js"

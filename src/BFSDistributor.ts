@@ -1,6 +1,6 @@
 import type { NS } from '@ns'
 import * as HackHelpers from '/Hack/HackHelpers'
-import { isFunctionProvider, type MinerProvider } from './Hack/Providers'
+import { isFunctionProvider, type MinerProvider } from './Hack/Miners/Providers'
 export async function BFSDistributor(ns: NS, targetName: string, provider: MinerProvider) {
     const hosts = HackHelpers.ScanAllServers(ns)
     if (!hosts.valueset.has(targetName)) {

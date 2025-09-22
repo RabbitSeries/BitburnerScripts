@@ -1,33 +1,34 @@
 
 import type { NS, RunOptions } from "@ns"
-import type { IMiner, IMinerArgs } from "/Hack/IMiner"
+import type { IMiner, IMinerArgs } from "./IMiner"
 import * as HackHelpers from "/Hack/HackHelpers"
-import { HackTask } from "./Task"
+import { HackTask } from "../HackHelpers"
 import { FreeRam } from "/utils/ServerStat"
+const prefix = "Hack/Scripts/"
 export const Miners = {
     RegularMiner: {
         name: "RegularMiner",
-        scriptPath: 'Hack/Scripts/RegularMiner.js'
+        scriptPath: prefix + 'RegularMiner.js'
     },
     SingleTaskMiner: {
         name: "SingleTaskMiner",
-        scriptPath: 'Hack/Scripts/SingleTaskMiner.js'
+        scriptPath: prefix + 'SingleTaskMiner.js'
     },
     HackMiner: {
         name: "HackMiner",
-        scriptPath: 'Hack/Scripts/HackMiner.js',
+        scriptPath: prefix + 'HackMiner.js',
     },
     GrowMiner: {
         name: "GrowMiner",
-        scriptPath: 'Hack/Scripts/GrowMiner.js',
+        scriptPath: prefix + 'GrowMiner.js',
     },
     WeakenMiner: {
         name: "WeakenMiner",
-        scriptPath: 'Hack/Scripts/WeakenMiner.js',
+        scriptPath: prefix + 'WeakenMiner.js',
     },
     MemSharer: {
         name: "Memsharer",
-        scriptPath: "Hack/Scripts/MemSharer.js"
+        scriptPath: prefix + "MemSharer.js"
     }
 }
 
@@ -67,12 +68,14 @@ export class HackMiner implements IMiner {
     ns: NS
     scriptPath = Miners.HackMiner.scriptPath
     threadOptions: number
-    constructor(ns: NS, hostName: string, targetName: string, threadOptions: number) {
+    additionalMsec: number
+    constructor(ns: NS, hostName: string, targetName: string, threadOptions: number, additionalMsec: number) {
         this.args = { hostName, targetName }
         this.ns = ns
         this.threadOptions = threadOptions
+        this.additionalMsec = additionalMsec
     }
-    run = () => HackHelpers.TryHacking(this.ns, this, this.args.targetName)
+    run = () => HackHelpers.TryHacking(this.ns, this, this.args.targetName, this.additionalMsec)
 }
 export class WeakenMiner extends HackMiner {
     scriptPath = Miners.WeakenMiner.scriptPath
@@ -80,10 +83,15 @@ export class WeakenMiner extends HackMiner {
 export class GrowMiner extends HackMiner {
     scriptPath = Miners.GrowMiner.scriptPath
 }
-export class MemSharer extends HackMiner {
+export class MemSharer implements IMiner {
     scriptPath: string = Miners.MemSharer.scriptPath
     constructor(ns: NS, hostName: string, threadOptions: number) {
-        super(ns, hostName, hostName, threadOptions)
+        this.args = { hostName, targetName: hostName }
+        this.ns = ns
+        this.threadOptions = threadOptions
     }
+    args: IMinerArgs
+    ns: NS
+    threadOptions: number | RunOptions
     run = () => HackHelpers.TryHacking(this.ns, this)
 }
