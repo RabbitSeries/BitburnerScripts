@@ -17,7 +17,7 @@ export default defineConfig([
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: { ecmaVersion: "latest", globals: globals.browser },
   },
-  // Somehow "eslint-plugin-react".configs.flat.recommended and tseslint.configs.recommended will ignore my ignores defined above
+  // Somehow eslint-plugin-react.configs.flat.recommended and tseslint.configs.recommended will ignore my ignores defined above
   reactRefresh.configs.recommended,
   reactHooks.configs['recommended-latest']
 ])

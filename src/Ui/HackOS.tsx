@@ -5,6 +5,7 @@ import ServerNode from './ServerTable/ServerInfo';
 import { Toolbar } from './Pallates/Toolbar';
 import type { ProcessHandle } from './OS/Process';
 import { TableHeader } from './ServerTable/TableHeader';
+import { ScanAllServers } from '/Hack/HackHelpers';
 export default function HackOS({ servers, ns, handle }: { servers: string[], ns: NS, handle: ProcessHandle }) {
     const { current: rootAccessRanker } = useRef(RootAccessRank(ns))
     const [ranker, setRanker] = useState(rootAccessRanker.thenSortBy(CurrentMoneyRateRank(ns).compare))
@@ -27,7 +28,7 @@ export default function HackOS({ servers, ns, handle }: { servers: string[], ns:
         <div className="multi-server-container">
             <h2>Network Server Information</h2>
             <div ref={timer}>Nah</div>
-            <Toolbar ns={ns} notifier={({ action }) => setRows(action === "Expand" ? servers : sorted.slice(0, 10))} ranker={ranker.compare}
+            <Toolbar ns={ns} notifier={({ action }) => setRows(action === "Expand" ? ScanAllServers(ns).sorted : sorted.slice(0, 10))} ranker={ranker.compare}
                 handle={{
                     close: () => {
                         if (refreshHandle.current) {

@@ -33,6 +33,7 @@ export function TableHeader({ ns, setRanker }: { ns: NS, setRanker: (ranker: Com
         "Current$/s": RootAccessRank(ns).thenSortBy(CurrentMoneyRateRank(ns).compare),
         "Potential$/s": RootAccessRank(ns).thenSortBy(PotentialMoneyRank(ns).compare),
         "RAM": RootAccessRank(ns).thenSortBy(Comparator.comparing(ns.getServerMaxRam).compare).reversed(),
+        "Cores": null
     })
     return <thead>
         <tr>

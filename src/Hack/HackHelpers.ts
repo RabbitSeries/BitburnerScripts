@@ -49,9 +49,9 @@ export function TryNuke(ns: NS, target: string) {
 }
 
 export enum HackTask {
-    Hack,
-    Weaken,
-    Grow
+    Hack = "Hack",
+    Weaken = "Weaken",
+    Grow = "Grow"
 }
 
 export function TryHacking(ns: NS, miner: IMiner, ...args: ScriptArg[]): number {
@@ -61,15 +61,22 @@ export function TryHacking(ns: NS, miner: IMiner, ...args: ScriptArg[]): number 
     }
     try {
         Scp(ns, miner.args.hostName)
-        const result = ns.exec(scriptPath, currentHost, threadOptions, ...args)
         // ns.print(`SUCCESS: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions} at ${result}`)
+        const freeRam = FreeRam.bind(ns)(currentHost), required = +threadOptions * ns.getScriptRam(scriptPath)
+        const formated = `${ns.formatRam(freeRam)}/${ns.formatRam(required)}`
+        if (freeRam < required) {// When running restricted machine, such start phase of each bitnode
+            throw new Error([`WARN: Free ram is not satisfied ${formated}`,
+            `Try to run the command at ${miner.args.hostName}:`,
+            `run ${scriptPath} -t ${+threadOptions} ${args.join(" ")}`,].join("\n"))
+        }
+        const result = ns.exec(scriptPath, currentHost, threadOptions, ...args)
         if (result === 0) {
-            throw new Error(["Runing", scriptPath, "at", currentHost, "with ram", FreeRam.bind(ns)(currentHost), "/", +threadOptions * ns.getScriptRam(scriptPath)].join(" "))
+            throw new Error(["ERROR: ", "Runing", scriptPath, "at", currentHost, "with ram", formated].join(" "))
         }
         return result;
     } catch (e) {
-        ns.print(`ERROR: Fatal error: ${e instanceof Error ? e.message : String(e)}`)
-        ns.print(`FAILED: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`)
+        ns.print(`ERROR: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`)
+        ns.print(`${e instanceof Error ? e.message : String(e)}`)
         return 0
     }
 }

@@ -8,6 +8,28 @@ export const HostHandlers: Record<"KillallExceptHome" | "ShareOnHost", Handler> 
     ShareOnHost: (ns, host) => ShareOn(ns, host)
 }
 export type TaskQueue = Promise<{ pid: number, host: string } | null>[]
+export const AwaitTasks = async (ns: NS, taskq: TaskQueue) => {
+    while (taskq.length > 0) {
+        const task = await taskq.shift()!
+        if (task === null) {
+            continue
+        }
+        const watchDog = async () => {
+            const running = ns.getRunningScript(task.pid)
+            if (running) {
+                ns.print(`WARN: Woof!!! Script has ran ${ns.tFormat(running.onlineRunningTime)}`)
+                ns.print(`Logs: ${running.logs}`)
+                return new Promise<void>((resolve) => {
+                    setTimeout(async () => {
+                        await watchDog()
+                        resolve()
+                    }, 1000)
+                })
+            }
+        }
+        await watchDog()
+    }
+}
 export function ScheduleWeakenTask(ns: NS, servers: string[], target: string,
     preHandler: Handler = HostHandlers["KillallExceptHome"],
     postHandler: Handler = HostHandlers["ShareOnHost"]
@@ -54,21 +76,27 @@ export function ScheduleHackTask(ns: NS, servers: string[], target: string,
             if (threadBoost === null) break
             const { hThread, wThread1, gThread, wThread2, ram } = threadBoost
             remainRam -= ram
-            const lagBase = (scheduled++) * 100
-            const finishLines = {
-                HackTime: lagBase + weakenTime - hackTime,
+            //! Don't change the constants!!!!!!!!!!!
+            //! Not worth it!!!!
+            const lagBase = (scheduled++) * 200
+            //                    |= hack ====================|
+            // |=weaken 1======================================|
+            //                |= grow ==========================|
+            //   |=weaken 2======================================|
+            const aligns = {
+                HackTime: lagBase + weakenTime - 100 - hackTime,
                 weaken1Time: lagBase,
-                growTime: lagBase + weakenTime - growTime,
-                weaken2Time: lagBase
+                growTime: lagBase + weakenTime + 100 - growTime,
+                weaken2Time: lagBase + 200
             }
-            new HackMiner(ns, host, target, hThread, finishLines.HackTime).run()
-            new WeakenMiner(ns, host, target, wThread1, finishLines.weaken1Time).run()
-            new GrowMiner(ns, host, target, gThread, finishLines.growTime).run()
-            lastTaskPid = new WeakenMiner(ns, host, target, wThread2, finishLines.weaken2Time).run()
+            new HackMiner(ns, host, target, hThread, aligns.HackTime).run()
+            new WeakenMiner(ns, host, target, wThread1, aligns.weaken1Time).run()
+            new GrowMiner(ns, host, target, gThread, aligns.growTime).run()
+            lastTaskPid = new WeakenMiner(ns, host, target, wThread2, aligns.weaken2Time).run()
         }
         postHandler(ns, host)
         if (lastTaskPid !== 0) {
-            await new Promise((resolve) => setTimeout(resolve, weakenTime + scheduled * 100))
+            await new Promise((resolve) => setTimeout(resolve, weakenTime + 50 + scheduled * 200))
             return { pid: lastTaskPid, host }
         } else {
             return null
@@ -83,28 +111,27 @@ export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
     const growTime = ns.getGrowTime(target), weakenTime = ns.getWeakenTime(target), availableMoney = ns.getServerMoneyAvailable(target)
     return servers.map(host => (async () => {
         preHandler(ns, host)
-        let remainRam = FreeRam.bind(ns)(host), lastTaskPid = 0
-        while (remainRam >= 0) {
-            const threadBoost = FindWGThreads(ns, host, target, remainRam),
-                maxMoney = ns.getServerMaxMoney(target)
-            if (threadBoost === null || totalGrowed >= (maxMoney / availableMoney)) {
-                break
-            }
-            const { gThread, wThread, ram } = threadBoost
-            remainRam -= ram
-            const lagBase = (scheduled++) * 100
-            const aligns = {
-                weakenTime: lagBase,
-                growTime: lagBase + weakenTime - 100 - growTime,
-            }
-            new GrowMiner(ns, host, target, gThread, aligns.growTime).run()
-            lastTaskPid = new WeakenMiner(ns, host, target, wThread, aligns.weakenTime).run()
-            try {
-                totalGrowed *= ns.formulas.hacking.growPercent(ns.getServer(target), gThread, ns.getPlayer())
-            }
-            catch {
-                totalGrowed *= 1 + GrowthPercent(ns, gThread, host, target)
-            }
+        let lastTaskPid = 0
+        const threadBoost = FindWGThreads(ns, host, target, FreeRam.bind(ns)(host)),
+            maxMoney = ns.getServerMaxMoney(target),
+            cores = ns.getServer(host).cpuCores
+        if (threadBoost === null || totalGrowed >= (maxMoney / availableMoney)) {
+            postHandler(ns, host)
+            return null
+        }
+        const { gThread, wThread } = threadBoost
+        const lagBase = (scheduled++) * 100
+        const aligns = {
+            weakenTime: lagBase,
+            growTime: lagBase + weakenTime - 100 - growTime,
+        }
+        new GrowMiner(ns, host, target, gThread, aligns.growTime).run()
+        lastTaskPid = new WeakenMiner(ns, host, target, wThread, aligns.weakenTime).run()
+        try {
+            totalGrowed *= ns.formulas.hacking.growPercent(ns.getServer(target), gThread, ns.getPlayer())
+        }
+        catch {
+            totalGrowed *= 1 + GrowthPercent(ns, gThread, cores, target)
         }
         postHandler(ns, host)
         if (lastTaskPid !== 0) {
@@ -115,8 +142,8 @@ export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
         }
     })())
 }
-export function GrowthPercent(ns: NS, growThread: number, host: string, target: string) {
-    const avai = ns.getServerMoneyAvailable(target), cores = ns.getServer(host).cpuCores
+export function GrowthPercent(ns: NS, growThread: number, cores: number, target: string) {
+    const avai = ns.getServerMoneyAvailable(target)
     if (avai === 0) {
         return 0
     }
@@ -136,12 +163,12 @@ export function GrowthPercent(ns: NS, growThread: number, host: string, target: 
 export function Weaken1Thread(ns: NS, hackThread: number, cores: number) {
     return Math.ceil(ns.hackAnalyzeSecurity(hackThread) / ns.weakenAnalyze(1, cores))
 }
-export function Weaken2Thread(ns: NS, growThread: number) {
+export function Weaken2Thread(ns: NS, growThread: number, cores: number) {
     // cores are devided
     // and u should not provide target parameter to growthAnalyze if the hypotential status doesn't match,
     // the secutiry increased is always 0 at maxMoney
     // return Math.ceil(ns.growthAnalyzeSecurity(growThread, target, cores) / ns.weakenAnalyze(1, cores))
-    return Math.ceil(ns.growthAnalyzeSecurity(growThread) / ns.weakenAnalyze(1))
+    return Math.ceil(ns.growthAnalyzeSecurity(growThread, undefined, cores) / ns.weakenAnalyze(1, cores))
 }
 export function GrowThread(ns: NS, hackThread: number, target: string, cores: number) {
     const hackPercent = ns.hackAnalyze(target) * hackThread
@@ -152,18 +179,18 @@ export function FindMaxHGWThreads(ns: NS, host: string, target: string, freeRam:
         weakenUsage = ns.getScriptRam(Miners.WeakenMiner.scriptPath),
         growUsage = ns.getScriptRam(Miners.GrowMiner.scriptPath),
         cores = ns.getServer(host).cpuCores
-    let l = 1, r = Math.floor(Math.min(freeRam / hackUsage, 0.99 / ns.hackAnalyze(target)))
+    let l = 1, r = Math.floor(Math.min(freeRam / hackUsage, 0.9999 / ns.hackAnalyze(target)))
     let optimal: { hThread: number, wThread1: number, gThread: number, wThread2: number, ram: number } | undefined = undefined
     // Binary search
     while (l <= r) {
-        const mid = Math.floor((l + r) / 2)
-        const gThread = GrowThread(ns, mid, target, cores), wThread1 = Weaken1Thread(ns, mid, cores), wThread2 = Weaken2Thread(ns, gThread)
-        const ram = (wThread1 + wThread2) * weakenUsage + hackUsage * mid + growUsage * gThread
-        if (ram <= FreeRam.bind(ns)(host)) {
-            optimal = { hThread: mid, wThread1, gThread, wThread2, ram: ram }
-            l = mid + 1
+        const hThread = Math.floor((l + r) / 2)
+        const gThread = GrowThread(ns, hThread, target, cores), wThread1 = Weaken1Thread(ns, hThread, cores), wThread2 = Weaken2Thread(ns, gThread, cores)
+        const ram = (wThread1 + wThread2) * weakenUsage + hackUsage * hThread + growUsage * gThread
+        if (ram <= freeRam) {
+            optimal = { hThread, wThread1, gThread, wThread2, ram }
+            l = hThread + 1
         } else {
-            r = mid - 1
+            r = hThread - 1
         }
     }
     return optimal ?? null
@@ -178,8 +205,8 @@ export function FindWGThreads(ns: NS, host: string, target: string, freeRam: num
     // Binary search
     while (l <= r) {
         const mid = Math.floor((l + r) / 2)
-        const wThread = Weaken2Thread(ns, mid)
-        const ram = Weaken2Thread(ns, mid) * weakenUsage + growUsage * mid
+        const wThread = Weaken2Thread(ns, mid, cores)
+        const ram = Weaken2Thread(ns, mid, cores) * weakenUsage + growUsage * mid
         if (ram <= freeRam) {
             optimal = { gThread: mid, wThread, ram }
             l = mid + 1

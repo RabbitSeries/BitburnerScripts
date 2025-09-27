@@ -14,6 +14,7 @@ export interface IServer {
     CurrMoneyRate: React.JSX.Element
     PotentialMoneyRate: React.JSX.Element
     RAM: React.JSX.Element
+    CORES: React.JSX.Element
     Actions: React.JSX.Element
 }
 export function Server(ns: NS, host: string, rowId: number): IServer {
@@ -45,6 +46,7 @@ export function Server(ns: NS, host: string, rowId: number): IServer {
         CurrMoneyRate: <td>{ns.formatNumber(CurrMoneyRate.bind(ns)(host), 1)}</td>,
         PotentialMoneyRate: <td>{ns.formatNumber(PotentialMoneyRate.bind(ns)(host), 1)}</td>,
         RAM: <td>{`${ns.formatNumber(stat.maxRam - stat.usedRam, 2)}/${ns.formatNumber(stat.maxRam, 2)}`}</td>,
+        CORES: <td>{ns.getServer(host).cpuCores}</td>,
         // Add a key to this, so the diff algorithm won't recreate new content for it
         Actions: <Actions key={host} host={host} ns={ns} ></Actions>
     }

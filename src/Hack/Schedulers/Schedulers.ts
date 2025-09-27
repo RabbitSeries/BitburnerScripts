@@ -1,7 +1,8 @@
 import type { NS, RunOptions } from "@ns"
 import type { IMiner, IMinerArgs } from "../Miners/IMiner"
 import { ScanAllServers, TryHacking } from "../HackHelpers"
-import { type TaskQueue, ScheduleWeakenTask, ScheduleHackTask, ScheduleGrowTask, type Handler, HostHandlers } from "./ScheduleHelpers"
+import { type TaskQueue, ScheduleWeakenTask, ScheduleHackTask, ScheduleGrowTask, type Handler, HostHandlers, AwaitTasks } from "./ScheduleHelpers"
+import { StopToken } from "/Ui/OS/Process"
 
 const prefix = "Hack/Scripts/"
 export const Schedulers = {
@@ -9,6 +10,7 @@ export const Schedulers = {
         scriptPath: prefix + "FullScheduler.js"
     }
 }
+
 export class FullScheduler implements IMiner {
     scriptPath = Schedulers.FullScheduler.scriptPath
     constructor(ns: NS, targetName: string) {
@@ -20,9 +22,17 @@ export class FullScheduler implements IMiner {
     ns: NS
     threadOptions: number | RunOptions
     run = () => TryHacking(this.ns, this, this.args.targetName)
+    /**
+     * Attach this scheduler to current running script, so that no additional RAM is required.
+     * @param servers selective servers to run HWG miners on, if not provided, this process will scan available servers at the beginning of each cycle.
+     * @param preHandler handler to clean resources or logging at the begging of scheduling for each server.
+     * @param postHandler handler to clean resources or logging at the end of shceduling for each server.
+     * @returns async process. //TODO Make this possible to accept a token to request stop
+     */
     static async attach(ns: NS, target: string, servers?: string[],
         preHandler: Handler = HostHandlers["KillallExceptHome"],
-        postHandler: Handler = HostHandlers["ShareOnHost"]
+        postHandler: Handler = HostHandlers["ShareOnHost"],
+        stop_token: StopToken = new StopToken()
     ) {
         const maxMoney = ns.getServerMaxMoney(target)
         if (maxMoney === 0) {
@@ -30,7 +40,7 @@ export class FullScheduler implements IMiner {
             return
         }
         const scan = servers === undefined
-        while (true) {
+        while (!stop_token.is_stop_requested()) {
             if (scan) servers = ScanAllServers(ns).sorted.filter(s => ns.hasRootAccess(s) && ns.getServerMaxRam(s) > 0)
             const hackCondition = ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target) >= 0.95,
                 weakenCondition = ns.getServerMinSecurityLevel(target) / ns.getServerSecurityLevel(target) <= 0.95
@@ -43,26 +53,7 @@ export class FullScheduler implements IMiner {
                 taskq.push(...ScheduleGrowTask(ns, servers!, target, preHandler, postHandler))
             }
             ns.print("Done distributing")
-            while (taskq.length > 0) {
-                const task = await taskq.shift()!
-                if (task === null) {
-                    continue
-                }
-                const watchDog = async () => {
-                    const running = ns.getRunningScript(task.pid)
-                    if (running) {
-                        ns.print(`WARN: Woof!!! Script has ran ${ns.tFormat(running.onlineRunningTime)}`)
-                        ns.print(`Logs: ${running.logs}`)
-                        return new Promise<void>((resolve) => {
-                            setTimeout(async () => {
-                                await watchDog()
-                                resolve()
-                            }, 1000)
-                        })
-                    }
-                }
-                await watchDog()
-            }
+            await AwaitTasks(ns, taskq)
             // ns.clearLog()
             // TODO Add better logging
             // ns.printRaw(<CountDown timer={taskDuration}>Host: {host} Target: {target}</CountDown>)
@@ -70,10 +61,11 @@ export class FullScheduler implements IMiner {
             if (hackCondition) {
                 // My computer sucks, these cat't be logged in 100ms
                 // ns.print(JSON.stringify(threadBoost), ` ${i} `, " ", host, " Waited ", ns.tFormat(Date.now() - begin), " Hypotential wait time ", ns.tFormat(waken2Finish))
-                ns.print("Server money: ", ns.formatPercent(ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target)))
-                ns.print("Server sercuritylevel increased: ", ns.formatNumber(ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target), 2))
+                ns.print(`Server ${target} money: `, ns.formatPercent(ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target)))
+                ns.print(`Server ${target} sercuritylevel increased: `, ns.formatNumber(ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target), 2))
             }
             // break
         }
+        ns.print("SUCCESS: Attached session cleaned")
     }
 }

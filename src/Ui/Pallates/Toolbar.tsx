@@ -1,8 +1,8 @@
-import React, { useRef } from "react"
 import type { NS } from "@ns"
+import React, { useEffect, useRef } from "react"
 import { FindPathTo, ScanAllServers, TryNuke } from "/Hack/HackHelpers"
 import { upgradeLevelBy, upgradeLevelTo } from "/HacknetBuyer"
-import type { ProcessHandle } from "../OS/Process"
+import { StopToken, type JThread, type ProcessHandle } from "../OS/Process"
 import { MemSharer, Miners, RegularMiner, SingleTaskMiner } from "../../Hack/Miners/Miners"
 import { HackTask } from "/Hack/HackHelpers"
 import { type Sorter } from "/utils/Comparators"
@@ -21,6 +21,16 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
             .map(i => ns.hacknet.getNodeStats(i).level))
         return max
     })
+    const AttachedHomeSession = useRef<JThread[]>([])
+    useEffect(() => () => {
+        for (const { stop_token, task } of AttachedHomeSession.current) {
+            stop_token.reqeust_stop()
+            const awaiter = async () => {
+                await task
+            }
+            awaiter()
+        }
+    }, [])// Add a dependency list, so this clean up will only becalled on unmount
     return <div style={{ display: "flex", flexDirection: "row" }}>
         <button ref={expander} onClick={() => {
             if (expander.current) {
@@ -73,36 +83,44 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
             Find Path
         </button>
         <button onClick={() => handle.close()}>Shut Down</button>
-        <button onClick={() => ns.prompt("Specify target", { type: "select", choices: ScanAllServers(ns).sorted.toSorted(ranker) }).then(r => `${r}`).then(async (targetName) => {
-            if (targetName.length === 0) {
-                return
-            }
-            ns.prompt("Specify Miner", { type: "select", choices: [Miners.RegularMiner.scriptPath, Miners.SingleTaskMiner.scriptPath, "FullScheduler"] }).then(async (choice) => {
-                if (choice === Miners.RegularMiner.scriptPath) {
-                    new RegularMiner(ns, {
-                        hostName: "home",
-                        targetName,
-                        threadOptions: Math.floor((ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) / ns.getScriptRam(Miners.RegularMiner.scriptPath))
-                    }).run()
-                }
-                else if (choice === Miners.SingleTaskMiner.scriptPath) {
-                    new SingleTaskMiner(ns, {
-                        hostName: "home",
-                        targetName,
-                        task: +await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack.toString(), HackTask.Weaken.toString(), HackTask.Grow.toString()] })
-                    }).run()
-                } else if (choice === "FullScheduler") {
-                    // This will stuck the game, don't know why
-                    FullScheduler.attach(ns, targetName, ["home"], () => { }, () => { }).catch(ns.tprint)
-                } else {
+        <button onClick={() => ns.prompt("Specify target", { type: "select", choices: ScanAllServers(ns).sorted.toSorted(ranker) })
+            .then(r => `${r}`)
+            .then(async (targetName) => {
+                if (targetName.length === 0) {
                     return
                 }
-                ns.tprint("Started " + choice)
-            })
-        }).catch(ns.tprint)}>Use Home Resources</button>
-        <button onClick={() => PuchaseServer(ns).then(ns.tprint).catch(ns.tprint)}>Purchase a server</button>
+                ns.prompt("Specify Miner", { type: "select", choices: [Miners.RegularMiner.scriptPath, Miners.SingleTaskMiner.scriptPath, "FullScheduler"] })
+                    .then(async (choice) => {
+                        if (choice === Miners.RegularMiner.scriptPath) {
+                            new RegularMiner(ns, {
+                                hostName: "home",
+                                targetName,
+                                threadOptions: Math.floor((ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) / ns.getScriptRam(Miners.RegularMiner.scriptPath))
+                            }).run()
+                        }
+                        else if (choice === Miners.SingleTaskMiner.scriptPath) {
+                            new SingleTaskMiner(ns, {
+                                hostName: "home",
+                                targetName,
+                                task: await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack, HackTask.Weaken, HackTask.Grow] }) as HackTask
+                            }).run()
+                        } else if (choice === "FullScheduler") {
+                            // ns.print("WARN: This attached session may cause leak problem!")
+                            const stop_token = new StopToken()
+                            AttachedHomeSession.current.push({
+                                name: "FullScheduler",
+                                stop_token,
+                                task: FullScheduler.attach(ns, targetName, ["home"], () => { }, () => { }, stop_token)
+                            })
+                        } else {
+                            return
+                        }
+                        ns.print("Started " + choice)
+                    })
+            }).catch(ns.tprint)}>Use Home Resources</button>
+        <button onClick={async () => ns.prompt("2^{Ram}:", { type: "text" }).then(r => PuchaseServer(ns, 2 ** (+r))).then(ns.print).catch(ns.tprint)}>Purchase a server</button>
         <button onClick={async () => {
-            for (const host of ["home", ...ScanAllServers(ns).sorted]) {
+            for (const host of ["home", ...ScanAllServers(ns).sorted.filter(s => ns.hasRootAccess(s))]) {
                 if (host !== "home") {
                     ns.killall(host)
                 }

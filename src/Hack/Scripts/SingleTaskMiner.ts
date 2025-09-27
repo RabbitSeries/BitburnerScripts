@@ -2,7 +2,7 @@ import type { NS } from "@ns"
 import { cyanStr } from "/Console/ConsoleColor"
 import { HackTask } from "../HackHelpers"
 export async function main(ns: NS) {
-    const target = ns.args[0].toString(), task = ns.args[1].valueOf()
+    const target = ns.args[0].toString(), task = ns.args[1]
     if (!ns.hasRootAccess(target)) {
         ns.print(`ERROR: No root access to target ${target}`)
         return
