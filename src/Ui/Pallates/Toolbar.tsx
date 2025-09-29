@@ -7,7 +7,7 @@ import { MemSharer, Miners, RegularMiner, SingleTaskMiner } from "../../Hack/Min
 import { HackTask } from "/Hack/HackHelpers"
 import { type Sorter } from "/utils/Comparators"
 import { FreeRam } from "/utils/ServerStat"
-import { FullScheduler } from "../../Hack/Schedulers/Schedulers"
+import { FullScheduler, Schedulers } from "../../Hack/Schedulers/Schedulers"
 import { PuchaseServer } from "/ServerBuyer"
 interface Notification {
     action: 'Expand' | 'Collapse'
@@ -99,19 +99,26 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
                             }).run()
                         }
                         else if (choice === Miners.SingleTaskMiner.scriptPath) {
-                            new SingleTaskMiner(ns, {
-                                hostName: "home",
-                                targetName,
-                                task: await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack, HackTask.Weaken, HackTask.Grow] }) as HackTask
-                            }).run()
+                            const task = await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack, HackTask.Weaken, HackTask.Grow] })
+                            if (task.toString() in HackTask) {
+                                new SingleTaskMiner(ns, {
+                                    hostName: "home",
+                                    targetName,
+                                    task: task.toString() as HackTask
+                                }).run()
+                            }
                         } else if (choice === "FullScheduler") {
                             // ns.print("WARN: This attached session may cause leak problem!")
-                            const stop_token = new StopToken()
-                            AttachedHomeSession.current.push({
-                                name: "FullScheduler",
-                                stop_token,
-                                task: FullScheduler.attach(ns, targetName, ["home"], () => { }, () => { }, stop_token)
-                            })
+                            if (FreeRam.bind(ns)("home") < ns.getScriptRam(Schedulers.FullScheduler.scriptPath)) {
+                                const stop_token = new StopToken()
+                                AttachedHomeSession.current.push({
+                                    name: "FullScheduler",
+                                    stop_token,
+                                    task: FullScheduler.attach(ns, targetName, ["home"], () => { }, () => { }, stop_token)
+                                })
+                            } else {
+                                new FullScheduler(ns, targetName, ["home"]).run()
+                            }
                         } else {
                             return
                         }
@@ -119,14 +126,13 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
                     })
             }).catch(ns.tprint)}>Use Home Resources</button>
         <button onClick={async () => ns.prompt("2^{Ram}:", { type: "text" }).then(r => PuchaseServer(ns, 2 ** (+r))).then(ns.print).catch(ns.tprint)}>Purchase a server</button>
+        <button onClick={async () => new MemSharer(ns, "home", Math.floor(FreeRam.bind(ns)("home") / ns.getScriptRam(Miners.MemSharer.scriptPath))).run()}>Share mem (HOME)</button>
         <button onClick={async () => {
-            for (const host of ["home", ...ScanAllServers(ns).sorted.filter(s => ns.hasRootAccess(s))]) {
-                if (host !== "home") {
-                    ns.killall(host)
-                }
+            for (const host of ScanAllServers(ns).sorted.filter(s => ns.hasRootAccess(s))) {
+                ns.killall(host)
                 const thread = Math.floor(FreeRam.bind(ns)(host) / ns.getScriptRam(Miners.MemSharer.scriptPath))
                 new MemSharer(ns, host, thread).run()
             }
-        }}>Share mem</button>
+        }}>Share mem (Servers)</button>
     </div>
 }

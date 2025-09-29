@@ -13,7 +13,7 @@ export function Actions({ ns, host }: { ns: NS, host: string }) {
         { task: HackTask.Grow, scheduler: ScheduleWeakenTask }])
     const state = useRef(TaskState.IDLE)
     const attached_task = useRef<JThread>(null)
-    // Better add this to parent, each actions should now own its own state
+    // Better add this to parent, each actions should not own its own state
     const arrange_task = useCallback(async (name: string, arrangement: (token: StopToken) => Promise<void>, onResolve: () => void, onReject: () => void) => {
         if (state.current === TaskState.STARTING || state.current === TaskState.STOPPING) {
             return onReject()
@@ -65,7 +65,7 @@ export function Actions({ ns, host }: { ns: NS, host: string }) {
         }}>{`${task}[✖]`}</td>
     )}
         <td key={`${host}FullScheduler`} onMouseDown={({ currentTarget }) => {
-            if (ns.getScriptRam(Schedulers.FullScheduler.scriptPath) >= FreeRam.bind(ns)("home")) {
+            if (ns.getScriptRam(Schedulers.FullScheduler.scriptPath) > FreeRam.bind(ns)("home")) {
                 arrange_task("FullScheduler", (token) => {
                     // ns.print("WARN: This attached session may cause leak problem!")
                     return FullScheduler.attach(ns, host, undefined, undefined, undefined, token)

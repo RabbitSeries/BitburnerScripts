@@ -3,9 +3,9 @@ import { ShareOn } from "../HackHelpers"
 import { GrowMiner, HackMiner, Miners, WeakenMiner } from "../Miners/Miners"
 import { FreeRam } from "/utils/ServerStat"
 export type Handler = (ns: NS, host: string) => void
-export const HostHandlers: Record<"KillallExceptHome" | "ShareOnHost", Handler> = {
+export const HostHandlers: Record<"KillallExceptHome" | "ShareExceptHome", Handler> = {
     KillallExceptHome: (ns, host) => { if (host !== "home") ns.killall(host) },
-    ShareOnHost: (ns, host) => ShareOn(ns, host)
+    ShareExceptHome: (ns, host) => { if (host !== "home") ShareOn(ns, host) }
 }
 export type TaskQueue = Promise<{ pid: number, host: string } | null>[]
 export const AwaitTasks = async (ns: NS, taskq: TaskQueue) => {
@@ -32,7 +32,7 @@ export const AwaitTasks = async (ns: NS, taskq: TaskQueue) => {
 }
 export function ScheduleWeakenTask(ns: NS, servers: string[], target: string,
     preHandler: Handler = HostHandlers["KillallExceptHome"],
-    postHandler: Handler = HostHandlers["ShareOnHost"]
+    postHandler: Handler = HostHandlers["ShareExceptHome"]
 ): TaskQueue {
     let totalWeakened = 0
     const weakenUsage = ns.getScriptRam(Miners.WeakenMiner.scriptPath), weakenTime = ns.getWeakenTime(target)
@@ -64,7 +64,7 @@ export function ScheduleWeakenTask(ns: NS, servers: string[], target: string,
 }
 export function ScheduleHackTask(ns: NS, servers: string[], target: string,
     preHandler: Handler = HostHandlers["KillallExceptHome"],
-    postHandler: Handler = HostHandlers["ShareOnHost"]
+    postHandler: Handler = HostHandlers["ShareExceptHome"]
 ): TaskQueue {
     let scheduled = 0
     const hackTime = ns.getHackTime(target), growTime = ns.getGrowTime(target), weakenTime = ns.getWeakenTime(target)
@@ -105,7 +105,7 @@ export function ScheduleHackTask(ns: NS, servers: string[], target: string,
 }
 export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
     preHandler: Handler = HostHandlers["KillallExceptHome"],
-    postHandler: Handler = HostHandlers["ShareOnHost"]
+    postHandler: Handler = HostHandlers["ShareExceptHome"]
 ): TaskQueue {
     let scheduled = 0, totalGrowed = 1
     const growTime = ns.getGrowTime(target), weakenTime = ns.getWeakenTime(target), availableMoney = ns.getServerMoneyAvailable(target)

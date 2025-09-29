@@ -13,25 +13,27 @@ export const Schedulers = {
 
 export class FullScheduler implements IMiner {
     scriptPath = Schedulers.FullScheduler.scriptPath
-    constructor(ns: NS, targetName: string) {
+    constructor(ns: NS, targetName: string, servers?: string[]) {
         this.args = { hostName: "home", targetName }
         this.ns = ns
         this.threadOptions = 1
+        this.servers = servers
     }
     args: IMinerArgs
     ns: NS
+    servers?: string[]
     threadOptions: number | RunOptions
-    run = () => TryHacking(this.ns, this, this.args.targetName)
+    run = () => TryHacking(this.ns, this, this.args.targetName, ...(this.servers ?? []))
     /**
      * Attach this scheduler to current running script, so that no additional RAM is required.
      * @param servers selective servers to run HWG miners on, if not provided, this process will scan available servers at the beginning of each cycle.
      * @param preHandler handler to clean resources or logging at the begging of scheduling for each server.
      * @param postHandler handler to clean resources or logging at the end of shceduling for each server.
-     * @returns async process. //TODO Make this possible to accept a token to request stop
+     * @returns async process. //TODO Make this possible to continuous arrange tasks, while(!q.empty()){const {host, freedPid} = q.shift(); arrange more on this host, append to queue }
      */
     static async attach(ns: NS, target: string, servers?: string[],
         preHandler: Handler = HostHandlers["KillallExceptHome"],
-        postHandler: Handler = HostHandlers["ShareOnHost"],
+        postHandler: Handler = HostHandlers["ShareExceptHome"],
         stop_token: StopToken = new StopToken()
     ) {
         const maxMoney = ns.getServerMaxMoney(target)
