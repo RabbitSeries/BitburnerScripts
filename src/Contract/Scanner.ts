@@ -3,14 +3,11 @@ import type { CodingContractName, CodingContractObject, NS } from "@ns"
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
 export async function main(ns: NS) {
-    const ContractName = "Square Root"
+    const ContractName = "Find All Valid Math Expressions"
     if (ns.args.length === 0) {
         // ================================================================Test
-        if (RunTests(ns, ContractName)) {
-            ns.tprint("Success")
-        } else {
-            ns.tprint("Failed")
-        }
+        const susccess = RunTests(ns, ContractName)
+        ns.tprint(`${susccess}/100`)
     } else {
         // ================================================================Dev
         const filename = ns.codingcontract.createDummyContract(ContractName)
@@ -46,7 +43,7 @@ export function RunTests(ns: NS, ContractName: string | CodingContractName) {
             ns.tprint(e)
             return false
         }
-    }).reduce((a, b) => a && b, true)
+    }).filter(a => a).length
 }
 const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number => {
     const DayN = prices.length
@@ -61,7 +58,7 @@ const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number 
     }
     return sold[DayN][TransN]
 }
-// Solved 12/28
+// Solved 13/28
 export const ContractSolves: Record<CodingContractName, (contract: CodingContractObject) => string | null> = {
     "Find Largest Prime Factor": () => null,
     "Subarray with Maximum Sum": () => null,
@@ -280,15 +277,26 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
         const plaintext = parsed[0] as string, keyword = parsed[1] as string
         return [...plaintext].map((text, i) => square[text.charCodeAt(0) - "A".charCodeAt(0)][keyword[i % keyword.length].charCodeAt(0) - "A".charCodeAt(0)]).join("")
     },
-    "Square Root": () => {
-        // TODO
-        return null
-        // Digit by digit method
-        // const data = BigInt(contract.data as string)
-        // return (data-1);
+    "Square Root": (contract) => {
+        // TODO Add Digit by digit method
+        const data = contract.data as bigint
+        let l = 0n, r = data
+        let best = 0n
+        while (l <= r) {
+            const mid = l + ((r - l) >> 1n) // caution on overflow, -- C++ Primer
+            if ((mid ** 2n) <= data) {
+                best = mid
+                l = mid + 1n
+            } else {
+                r = mid - 1n
+            }
+        }
+        const gap = data - best ** 2n
+        return (best + 1n) ** 2n - data > gap ? best.toString() : (best + 1n).toString()
     },
 }
-
+// 206709625724006811140813487909831373025219028355997607627414262977965774730713682504812082369494140339024924919306060125610274792098457600859195566446517278014713829766811044324223837215531593471547811
+// 206709625724006811140813487909831373025219028355997607627414262977965774730713682504812082369494140324647525094441801620307315320549895225697173960832335549154332014141054260912440631293274839767403396
 // type ArrayLikeResult = string | number | ArrayLikeResult[];
 // function findArray(text: string, firstOnly: boolean = true): ArrayLikeResult[] {
 //     const has_subGroup = /^(.*?)\[(.*)\](.*?)$/
