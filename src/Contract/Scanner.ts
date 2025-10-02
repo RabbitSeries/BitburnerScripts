@@ -3,33 +3,50 @@ import type { CodingContractName, CodingContractObject, NS } from "@ns"
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
 export async function main(ns: NS) {
-    const filename = ns.codingcontract.createDummyContract("Encryption I: Caesar Cipher")
-    await TellContract(ns, "home", [filename])
-    ns.rm(filename, "home")
-    // for (const host of ScanAllServers(ns).sorted) {
-    //     const contracts = ns.ls(host, ".cct")
-    //     if (contracts.length > 0) {
-    //         ns.tprint("Found on ", host, ": ", ...contracts)
-    //         await TellContract(ns, host, contracts)
-    //     }
-    // }
-}
-
-export async function TellContract(ns: NS, host: string, files: string[]) {
-    for (const file of files) {
-        const contract = ns.codingcontract.getContract(file, host)
-        try {
-            await ns.prompt(contract.type + "\n" + contract.description)
-            const result = ContractSolves[contract.type](contract)
-            if (result !== null) {
-                const confirm = await ns.prompt(result)
-                if (result.length > 0 && typeof confirm === "boolean" && confirm) {
-                    await ns.prompt(contract.submit(result))
-                    await ns.prompt(`${contract.numTriesRemaining()}`)
-                }
-            }
-        } catch (e) { ns.tprint(e) }
+    const ContractName = "Square Root"
+    if (ns.args.length === 0) {
+        // ================================================================Test
+        if (RunTests(ns, ContractName)) {
+            ns.tprint("Success")
+        } else {
+            ns.tprint("Failed")
+        }
+    } else {
+        // ================================================================Dev
+        const filename = ns.codingcontract.createDummyContract(ContractName)
+        const contract = ns.codingcontract.getContract(filename, "home")
+        ns.rm(filename)
+        await ns.prompt(contract.type + "\n" + contract.description)
+        const result = ContractSolves[contract.type](contract)
+        const submit = await ns.prompt(`${result}`)
+        if (!submit) {
+            return
+        }
+        if (!result || contract.submit(result).trim().length === 0) {
+            ns.tprint("Faild on: ", contract.data)
+            ns.tprint("Solve: ", result)
+        }
+        await ns.prompt("Remain: " + contract.numTriesRemaining())
     }
+}
+export function RunTests(ns: NS, ContractName: string | CodingContractName) {
+    return Array.from({ length: 100 }).map(() => {
+        try {
+            const filename = ns.codingcontract.createDummyContract(ContractName)
+            const contract = ns.codingcontract.getContract(filename, "home")
+            const result = ContractSolves[contract.type](contract)
+            ns.rm(filename)
+            if (!result || contract.submit(result).trim().length === 0) {
+                ns.tprint("Faild on: ", contract.data)
+                ns.tprint("Solve: ", result)
+                return false
+            }
+            return true
+        } catch (e) {
+            ns.tprint(e)
+            return false
+        }
+    }).reduce((a, b) => a && b, true)
 }
 const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number => {
     const DayN = prices.length
@@ -44,6 +61,7 @@ const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number 
     }
     return sold[DayN][TransN]
 }
+// Solved 12/28
 export const ContractSolves: Record<CodingContractName, (contract: CodingContractObject) => string | null> = {
     "Find Largest Prime Factor": () => null,
     "Subarray with Maximum Sum": () => null,
@@ -63,8 +81,38 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
             .map(([, ways]) => ways)
             .reduce((a, b) => a + b, 0).toString()
     },
-    "Total Ways to Sum II": () => null,
-    "Spiralize Matrix": () => null,
+    "Total Ways to Sum II": (contract) => {
+        const data = contract.data as (number | number[])[]
+        const num = data[0] as number, part = data[1] as number[]
+        const ways = Array.from({ length: num + 1 }, () => 0)
+        ways[0] = 1
+        for (let i = 1; i <= part.length; i++) {
+            for (let j = part[i - 1]; j <= num; j++) {
+                ways[j] += ways[j - part[i - 1]]
+            }
+        }
+        return ways[num].toString()
+    },
+    "Spiralize Matrix": (contract) => {
+        const data = contract.data as number[][]
+        const rows = data.length, cols = data[0].length
+        const visited = Array.from({ length: rows }, () => Array.from<boolean>({ length: cols }).fill(false))
+        let direction = 0, i = 0, j = 0
+        const dx = [0, 1, 0, -1], dy = [1, 0, -1, 0]
+        const result: number[] = []
+        const isValid = (nextI: number, nextJ: number) => nextI >= 0 && nextI < rows && nextJ >= 0 && nextJ < cols
+        while (isValid(i, j) && !visited[i][j]) {
+            visited[i][j] = true
+            result.push(data[i][j])
+            const nextI = i + dx[direction], nextJ = j + dy[direction]
+            if (!isValid(nextI, nextJ) || visited[nextI][nextJ]) {
+                direction = (direction + 1) % 4
+            }
+            i += dx[direction]
+            j += dy[direction]
+        }
+        return result.toString()
+    },
     "Array Jumping Game": () => null,
     "Array Jumping Game II": () => null,
     "Merge Overlapping Intervals": () => null,
@@ -97,9 +145,128 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
     "HammingCodes: Integer to Encoded Binary": () => null,
     "HammingCodes: Encoded Binary to Integer": () => null,
     "Proper 2-Coloring of a Graph": () => null,
-    "Compression I: RLE Compression": () => null,
-    "Compression II: LZ Decompression": () => null,
-    "Compression III: LZ Compression": () => null,
+    "Compression I: RLE Compression": (contract) => {
+        const data = contract.data as string
+        let index = 0
+        const result: { len: number, char: string }[] = []
+        while (index < data.length) {
+            if (result.length === 0 || data[index] !== data[index - 1] || result.slice(-1)[0].len >= 9) {
+                result.push({ len: 1, char: data[index] })
+            } else {
+                result.slice(-1)[0].len++
+            }
+            index++
+        }
+        return result.map(({ len, char }) => `${len}${char}`).join("")
+    },
+    "Compression II: LZ Decompression": (contract) => {
+        const data = contract.data as string
+        let result = ""
+        let index = 0
+        let isReference = false
+        while (index < data.length) {
+            if (isReference) {
+                const len = data[index].charCodeAt(0) - "0".charCodeAt(0)
+                index++
+                if (len !== 0) {
+                    const offset = data[index].charCodeAt(0) - "0".charCodeAt(0)
+                    const content = result.slice(-offset)
+                    // Copy len/conten.length's content 
+                    // Remain length in content is len%content.length, index apply -1 
+                    // End index is excluded in slice api, apply + 1
+                    result += Array.from({ length: Math.floor(len / content.length) }, () => content).join("") + content.slice(0, len % content.length)
+                    index++
+                }
+                isReference = false
+            } else {
+                const len = data[index].charCodeAt(0) - "0".charCodeAt(0)
+                result += data.slice(index + 1, index + 1 + len)
+                index += len + 1
+                isReference = true
+            }
+        }
+        return result
+    },
+    "Compression III: LZ Compression": (contract) => {
+        const data = contract.data as string
+        type state = {
+            index: number,
+            isReference: boolean
+            content: string // Carry this state's content information, this won't be hashed. This content should keep the same property with mapped value.
+        }
+        const key = (s: state) => `${s.index},${s.isReference}`
+        const findLongestCommon = (preEnd: number) => {
+            let res: { len: number, pre: number }[] = []
+            let maxLen = -Infinity
+            for (let i = 1; i <= 9; i++) { // pre
+                const pre = preEnd - (i - 1)
+                if (pre < 0) { break }
+                for (let j = 0; j < 9; j++) {
+                    const content = data.slice(pre, pre + j + 1)
+                    if (data.slice(preEnd + 1).startsWith(content) && content.length >= maxLen) {
+                        if (content.length > maxLen) {
+                            res = []
+                        }
+                        res.push({ len: content.length, pre: i })
+                        maxLen = content.length
+                    }
+                }
+            }
+            return res
+        }
+        const start: state = {
+            index: -1,
+            isReference: true,
+            content: ""
+        }
+        // const endKey = key({index: data.length-1, isReference : true | false, content : any})
+        // shortest[state] => shortest[state]+nextState.length
+        // nextState: not isReference-> nextReference -> longest common string
+        //            isReference    -> keep raw      -> i~n compress
+        const shortest = new Map<string, number>([[key(start), 0]]) // HashKey => minLength
+        const q: state[] = [start]
+        const sorter = (a: state, b: state) => a.index === b.index ? a.content.length - b.content.length : a.index - b.index
+        const heappush = (nextState: state) => {
+            const nextKey = key(nextState)
+            if (!shortest.has(nextKey) || shortest.get(nextKey)! > nextState.content.length) {// Change > to >= to retrieve all results
+                shortest.set(nextKey, nextState.content.length)
+                q.push(nextState)
+                q.sort(sorter) // Expensive but effective heap
+            }
+        }
+        let result = "" // Change result to [] to retrieve all results
+        while (q.length > 0) {
+            const s = q.shift()!
+            if (shortest.get(key(s))! > s.content.length) {
+                continue
+            } // shortes[s] === s.content.length from here
+            if (result.length !== 0 && s.content.length !== result.length) { // Result has been found, and the latter result is not optimal result, clear heap
+                break
+            }
+            if (s.index === data.length - 1) { // Reached end
+                result = s.content
+                continue // or just break here
+            }
+            if (s.isReference) {
+                for (let index = s.index; index < data.length && index < s.index + 10; index++) {
+                    heappush({
+                        index,
+                        isReference: false,
+                        content: `${s.content}${index - s.index}${data.slice(s.index + 1, index + 1)}`
+                    })
+                }
+            } else {
+                for (const { len, pre } of [...findLongestCommon(s.index), { len: 0, pre: -1 }]) {
+                    heappush({
+                        index: s.index + len,
+                        isReference: true,
+                        content: `${s.content}${pre === -1 ? 0 : `${len}${pre}`}`,
+                    })
+                }
+            }
+        }
+        return result
+    },
     "Encryption I: Caesar Cipher": (contract) => {
         const parsed = contract.data as (string | number)[]
         const plaintext = parsed[0] as string, shift = parsed[1] as number
@@ -113,7 +280,13 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
         const plaintext = parsed[0] as string, keyword = parsed[1] as string
         return [...plaintext].map((text, i) => square[text.charCodeAt(0) - "A".charCodeAt(0)][keyword[i % keyword.length].charCodeAt(0) - "A".charCodeAt(0)]).join("")
     },
-    "Square Root": () => null,
+    "Square Root": () => {
+        // TODO
+        return null
+        // Digit by digit method
+        // const data = BigInt(contract.data as string)
+        // return (data-1);
+    },
 }
 
 // type ArrayLikeResult = string | number | ArrayLikeResult[];
