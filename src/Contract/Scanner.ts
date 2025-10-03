@@ -1,50 +1,67 @@
-import type { CodingContractName, CodingContractObject, NS } from "@ns"
-// import { ScanAllServers } from "/Hack/HackHelpers"
+import type { CodingContractName, CodingContractObject, CodingContractSignatures, NS } from "@ns"
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
 export async function main(ns: NS) {
     const ContractName = "Find All Valid Math Expressions"
+    const total = 100
+    const now = Date.now()
     if (ns.args.length === 0) {
         // ================================================================Test
-        const susccess = RunTests(ns, ContractName)
-        ns.tprint(`${susccess}/100`)
+        const susccess = await RunTests(ns, ContractName, total)
+        ns.tprint(`${susccess}/${total}`)
+    } else if (ns.args[0] === "ALL") {
+        for (const [Name] of Object.entries(ContractSolves)) {
+            // const thisNow = Date.now()
+            ns.tprint(`${Name}: ${await RunTests(ns, Name, total)}/${total}`)
+            // ns.tprint("This costs: ", ns.tFormat(Date.now() - thisNow, true))
+        }
     } else {
         // ================================================================Dev
         const filename = ns.codingcontract.createDummyContract(ContractName)
         const contract = ns.codingcontract.getContract(filename, "home")
-        ns.rm(filename)
         await ns.prompt(contract.type + "\n" + contract.description)
         const result = ContractSolves[contract.type](contract)
         const submit = await ns.prompt(`${result}`)
-        if (!submit) {
+        if (result === null || !submit) {
             return
         }
-        if (!result || contract.submit(result).trim().length === 0) {
-            ns.tprint("Faild on: ", contract.data)
-            ns.tprint("Solve: ", result)
+        const submission = ns.codingcontract.attempt(result, filename, "home")
+        if (submission.length === 0) {
+            ns.tprint("Failed on: ", contract.data)
+            ns.tprint("My guess: ", result)
+            return
+        } else {
+            ns.rm(filename)
+            await ns.prompt("Success: " + contract.numTriesRemaining())
         }
-        await ns.prompt("Remain: " + contract.numTriesRemaining())
     }
+    ns.tprint("Total cost: ", ns.tFormat(Date.now() - now, true))
 }
-export function RunTests(ns: NS, ContractName: string | CodingContractName) {
-    return Array.from({ length: 100 }).map(() => {
+export async function RunTests(ns: NS, ContractName: string | CodingContractName, times: number) {
+    let count = 0
+    for (let i = 0; i < times; i++) {
         try {
             const filename = ns.codingcontract.createDummyContract(ContractName)
             const contract = ns.codingcontract.getContract(filename, "home")
             const result = ContractSolves[contract.type](contract)
-            ns.rm(filename)
-            if (!result || contract.submit(result).trim().length === 0) {
-                ns.tprint("Faild on: ", contract.data)
-                ns.tprint("Solve: ", result)
-                return false
+            if (result === null || ns.codingcontract.attempt(result, filename, "home").trim().length === 0) {
+                ns.tprint("Failed on: ", contract.data)
+                ns.tprint("My guess: ", result)
+                continue
             }
-            return true
+            ns.rm(filename)
+            count++
         } catch (e) {
             ns.tprint(e)
-            return false
         }
-    }).filter(a => a).length
+    }
+    return count
 }
+
+type ResultType = {
+    [T in keyof CodingContractSignatures]: CodingContractSignatures[T][1] | null;
+}[keyof CodingContractSignatures];
+
 const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number => {
     const DayN = prices.length
     prices = [0, ...prices] /* Index from 1 */
@@ -52,16 +69,163 @@ const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number 
         sold = Array.from({ length: DayN + 1 }, () => Array(TransN + 1).fill(0))
     for (let day = 1; day <= DayN; day++) {
         for (let trans = 0; trans <= TransN; trans++) {
-            holding[day][trans] = Math.max(day > 1 ? holding[day - 1][trans] : -Infinity, sold[day - 1][trans] - prices[day])
-            sold[day][trans] = Math.max(sold[day - 1][trans], (day > 1 && trans > 0) ? holding[day - 1][trans - 1] + prices[day] : -Infinity)
+            holding[day][trans] = Math.max(day > 1 ? holding[day - 1][trans] : -Infinity/* Impossible holding at day 0 */, sold[day - 1][trans] - prices[day])
+            sold[day][trans] = Math.max(sold[day - 1][trans], (day > 1 && trans > 0) ? holding[day - 1][trans - 1] + prices[day] : -Infinity/* 
+                Impossible holding at trans -1
+            */)
         }
     }
     return sold[DayN][TransN]
 }
-// Solved 13/28
-export const ContractSolves: Record<CodingContractName, (contract: CodingContractObject) => string | null> = {
-    "Find Largest Prime Factor": () => null,
-    "Subarray with Maximum Sum": () => null,
+
+const UniquePathsInAGridSolver = (graph: number[][]) => {
+    const rows = graph.length, cols = graph[0].length
+    const isValid = (x: number, y: number) => x >= 0 && y >= 0 && x < rows && y < cols && graph[x][y] !== 1
+    const begin = [0, 0]
+    const paths = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0))
+    const q = [begin]
+    const visited = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false))
+    visited[0][0] = true
+    paths[0][0] = 1
+    while (q.length > 0) {
+        const [x, y] = q.shift()!
+        for (const [nx, ny] of [[x + 1, y], [x, y + 1]]) {
+            if (isValid(nx, ny)) {
+                paths[nx][ny] += paths[x][y]
+                if (!visited[nx][ny]) {
+                    visited[nx][ny] = true
+                    q.push([nx, ny])
+                }
+            }
+        }
+    }
+    return paths[rows - 1][cols - 1]
+}
+
+// For hamming code solvers
+const isPowOf2 = (num: number) => {
+    if (num === 0) {
+        return false
+    }
+    while (num > 1) {
+        if (num % 2 !== 0) return false
+        num >>= 1
+    }
+    return true
+}
+
+const HammingEncode = (data: number): ResultType => {
+    const binary = [...data.toString(2)]
+    const CorrectionCodeBitsN = (dataLen: number) => {
+        //  2^k  - 1 >= n+k
+        let l = 0, r = Math.floor(3 + Math.log2(dataLen))
+        let best = 0
+        while (l <= r) {
+            const mid = (l + r) >> 1
+            if ((2 ** mid - 1) >= (dataLen + mid)) {
+                best = mid
+                r = mid - 1
+            } else {
+                l = mid + 1
+            }
+        }
+        return best
+    }
+    const corrN = CorrectionCodeBitsN(binary.length)
+    let i = 0
+    const totalLen = corrN + binary.length
+    const encoded = Array.from({ length: totalLen + 1 }, (_, j) => {
+        if (j === 0 || isPowOf2(j)) {
+            return 0 // original correction bits should be 0
+        } else {
+            return parseInt(binary[i++])
+        }
+    })
+    for (let corr = 1; corr <= totalLen; corr++) {
+        let base = 0
+        let currIndex = corr
+        while (currIndex > 0) {
+            if (currIndex % 2 === 1) {
+                encoded[2 ** base] ^= encoded[corr]
+            }
+            currIndex >>= 1
+            base++
+        }
+    }
+    for (let corr = 1; corr <= totalLen; corr++) {
+        encoded[0] = encoded[0] ^ encoded[corr]
+    }
+    return encoded.join("")
+}
+
+const HammingDecode = (data: string) => {
+    const encoded = data
+    //? Uncaught TypeError TypeError: String.prototype.matchAll called with a non-global RegExp argument
+    // add a g
+    const isEven = (encoded.matchAll(/[1]/g).toArray().length % 2) === 0
+    const decoder = (bits: string[]) => parseInt(bits.map((v, i) => (i === 0 || isPowOf2(i)) ? null : v).filter(v => v !== null).join(""), 2)
+    if (isEven) {
+        return decoder([...encoded])
+    } else {
+        const Verifications = [...encoded].map(() => 0)
+        for (let corr = 1; corr < encoded.length; corr++) {
+            let currIndex = corr
+            let base = 0
+            while (currIndex > 0) {
+                if (currIndex % 2 === 1) {
+                    Verifications[2 ** base] ^= parseInt(encoded[corr], 2)
+                }
+                currIndex >>= 1
+                base++
+            }
+        }
+        const location = Verifications.map((v, i) => v === 0 ? 0 : i).reduce((a, b) => a + b, 0)
+        return decoder([...encoded].map((v, i) => {
+            if (i === location) {
+                return (v === "0") ? "1" : "0"
+            } else {
+                return v
+            }
+        }))
+    }
+}
+
+export const ContractSolves: Record<keyof CodingContractSignatures, (contract: CodingContractObject) => ResultType> = {
+    "Find Largest Prime Factor": (contract) => {
+        let data = contract.data as number
+        const factor = (input: number) => {
+            for (let i = 2; i <= Math.floor(Math.sqrt(input)); i++) {
+                if (input % i === 0) {
+                    input /= i
+                    return i
+                }
+            }
+        }
+        while (data >= 2) {
+            const prime = factor(data)
+            if (prime !== undefined) {
+                data /= prime
+            } else {
+                break
+            }
+        }
+        return data
+    },
+    "Subarray with Maximum Sum": (contract) => {
+        const data = contract.data as number[]
+        const maxSum: number[] = [0, ...data]
+        const prefix = [0]
+        data.forEach((v, i) => prefix.push(v + prefix[i]))
+        let max = -Infinity
+        for (let i = 1; i <= data.length; i++) {
+            for (let j = i - 1; j >= 1; j--) {
+                const range = prefix[i] - prefix[j]
+                maxSum[i] = Math.max(maxSum[j] + range, maxSum[i])
+            }
+            max = Math.max(maxSum[i], max)
+        }
+        return max
+    },
     "Total Ways to Sum": (contract) => {
         const num = contract.data as number
         const count = Array.from<number[]>({ length: num + 1 }).map(() => new Map<number, number>());
@@ -76,7 +240,7 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
         return count[num].entries()
             .filter(([contains]) => contains >= 2)
             .map(([, ways]) => ways)
-            .reduce((a, b) => a + b, 0).toString()
+            .reduce((a, b) => a + b, 0)
     },
     "Total Ways to Sum II": (contract) => {
         const data = contract.data as (number | number[])[]
@@ -88,7 +252,7 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
                 ways[j] += ways[j - part[i - 1]]
             }
         }
-        return ways[num].toString()
+        return ways[num]
     },
     "Spiralize Matrix": (contract) => {
         const data = contract.data as number[][]
@@ -108,12 +272,75 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
             i += dx[direction]
             j += dy[direction]
         }
-        return result.toString()
+        return result
     },
-    "Array Jumping Game": () => null,
-    "Array Jumping Game II": () => null,
-    "Merge Overlapping Intervals": () => null,
-    "Generate IP Addresses": () => null,
+    "Array Jumping Game": (contract) => {
+        const data = contract.data as number[]
+        const dfs = (i: number): boolean => {
+            if (i >= data.length - 1) return true
+            for (let j = i + data[i]; j >= i + 1; j--) {
+                if (dfs(j)) {
+                    return true
+                }
+            }
+            return false
+        }
+        return +dfs(0)
+    },
+    "Array Jumping Game II": (contract) => {
+        const data = contract.data as number[]
+        if (data[0] === 0) {
+            return 0
+        }
+        const dp = Array.from({ length: data.length }, () => Infinity)
+        dp[0] = 0 // Min jumps from i reaching j, locate at 0 at first
+        for (let i = 0; i < data.length; i++) {
+            // from location i
+            // reaching
+            for (let j = i + 1; j <= Math.min(i + data[i], data.length - 1); j++) {
+                // Jumped 1 ~ data[i] to locate at index i+j
+                dp[j] = Math.min(dp[i] + 1, dp[j])
+            }
+        }
+        const minJmp = dp[data.length - 1]
+        return minJmp === Infinity ? 0 : minJmp
+    },
+    "Merge Overlapping Intervals": (contract) => {
+        const data = contract.data as [number, number][]
+        data.sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0])
+        const sorted = [data[0]]
+        for (const [l, r] of data.slice(1)) {
+            const last = sorted.slice(-1)[0]
+            if (l > last[1]) {
+                sorted.push([l, r])
+            } else {
+                last[1] = Math.max(last[1], r)
+            }
+        }
+        return sorted
+    },
+    "Generate IP Addresses": (contract) => {
+        const data = contract.data as string
+        const ipList: string[] = []
+        const dfs = (i: number, ip: string[]) => {
+            if (i === data.length) {
+                if (ip.length === 4) {
+                    ipList.push(ip.join("."))
+                }
+                return
+            }
+            for (let j = i; j < i + 3 && ip.length < 4 && (j === i || data[i] !== "0"); j++) {
+                const nextGroup = data.slice(i, j + 1)
+                if (parseInt(nextGroup) > 255) {
+                    break
+                }
+                const nextIp = [...ip, nextGroup]
+                dfs(j + 1, nextIp)
+            }
+        }
+        dfs(0, [])
+        return ipList
+    },
     "Algorithmic Stock Trader I": (contract) => {
         const parsed = contract.data as number[]
         let minBuyPrice = Infinity, profit = -Infinity
@@ -121,27 +348,207 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
             minBuyPrice = Math.min(price, minBuyPrice)
             profit = Math.max(profit, price - minBuyPrice)
         }
-        return Math.max(profit, 0).toString()
+        return Math.max(profit, 0)
     },
     "Algorithmic Stock Trader II": (contract) => {
         const parsed = contract.data as number[]
         const prices = [Infinity, ...parsed]
-        return prices.map((v, i) => v - prices[i - 1]).filter(v => v > 0).reduce((a, b) => a + b, 0).toString()
+        return prices.map((v, i) => v - prices[i - 1]).filter(v => v > 0).reduce((a, b) => a + b, 0)
     },
-    "Algorithmic Stock Trader III": (contract) => AlgorithmicStockTraderSolver(2, contract.data as number[]).toString(),
+    "Algorithmic Stock Trader III": (contract) => AlgorithmicStockTraderSolver(2, contract.data as number[]),
     "Algorithmic Stock Trader IV": (contract) => {
+        // ! This is something new, I have another statemathine solution, but complex
         const parsed = contract.data as (number | number[])[]
-        return AlgorithmicStockTraderSolver(parsed[0] as number, parsed[1] as number[]).toString()
+        return AlgorithmicStockTraderSolver(parsed[0] as number, parsed[1] as number[])
     },
-    "Minimum Path Sum in a Triangle": () => null,
-    "Unique Paths in a Grid I": () => null,
-    "Unique Paths in a Grid II": () => null,
-    "Shortest Path in a Grid": () => null,
-    "Sanitize Parentheses in Expression": () => null,
-    "Find All Valid Math Expressions": () => null,
-    "HammingCodes: Integer to Encoded Binary": () => null,
-    "HammingCodes: Encoded Binary to Integer": () => null,
-    "Proper 2-Coloring of a Graph": () => null,
+    "Minimum Path Sum in a Triangle": (contract) => {
+        const data = contract.data as number[][]
+        const endRow = data.length - 1
+        const minSum = Array.from({ length: data.length }, (_, i) => Array.from({ length: data[i].length }, () => Infinity))
+        const q: { i: number, j: number, sum: number }[] = [{ i: 0, j: 0, sum: data[0][0] }]
+        minSum[0][0] = data[0][0]
+        let min = Infinity
+        while (q.length > 0) {
+            const { i, j, sum } = q.shift()!
+            if (i === endRow) {
+                min = Math.min(min, sum)
+                continue
+            }
+            if (minSum[i][j] < sum) {
+                continue
+            }
+            for (const nj of [j, j + 1]) {
+                const ni = i + 1
+                if (ni <= endRow && nj < minSum[ni].length && (minSum[ni][nj] === -1 || minSum[ni][nj] > (sum + data[ni][nj]))) {
+                    minSum[ni][nj] = sum + data[ni][nj]
+                    q.push({ i: ni, j: nj, sum: sum + data[ni][nj] })
+                }
+            }
+        }
+        return min
+    },
+    "Unique Paths in a Grid I": (contract) => {
+        const [rows, cols] = contract.data as [number, number]
+        const graph = Array.from({ length: rows as number }, () => Array.from({ length: cols }, () => 0))
+        return UniquePathsInAGridSolver(graph)
+    },
+    "Unique Paths in a Grid II": (contract) => {
+        const graph = contract.data as number[][]
+        return UniquePathsInAGridSolver(graph)
+    },
+    "Shortest Path in a Grid": (contract) => {
+        const graph = contract.data as number[][]
+        const rows = graph.length, cols = graph[0].length
+        const isValid = (x: number, y: number) => x >= 0 && y >= 0 && x < rows && y < cols && graph[x][y] !== 1
+        const pq: { x: number, y: number, path: string }[] = [{ x: 0, y: 0, path: "" }]
+        const shortest = Array.from({ length: rows }, () => Array.from({ length: cols }, () => -1))
+        shortest[0][0] = 0
+        const dx = [-1, 1, 0, 0],
+            dy = [0, 0, -1, 1]
+        const dir = "UDLR"
+        while (pq.length > 0) {
+            const { x, y, path } = pq.shift()!
+            if (x === rows - 1 && y == cols - 1) {
+                return path
+            }
+            if (path.length > shortest[x][y]) {
+                continue
+            }
+            for (let i = 0; i < 4; i++) {
+                const next = { x: x + dx[i], y: y + dy[i], path: path + dir[i] }
+                if (isValid(next.x, next.y) && (shortest[next.x][next.y] === -1 || next.path.length < shortest[next.x][next.y])) {
+                    shortest[next.x][next.y] = next.path.length
+                    pq.push(next)
+                    pq.sort((a, b) => a.path.length - b.path.length)
+                }
+            }
+        }
+        return ""
+    },
+    "Sanitize Parentheses in Expression": (contract) => {
+        const validate = (input: string) => {
+            const stack: string[] = []
+            for (const char of input) {
+                if (char === "(") {
+                    stack.push(char)
+                } else if (char === ")") {
+                    while (stack.length > 0 && stack.slice(-1)[0] !== "(") {
+                        stack.pop()
+                    }
+                    if (stack.length > 0 && stack.slice(-1)[0] === "(") {
+                        stack.pop()
+                    } else {
+                        return false
+                    }
+                }
+            }
+            return stack.length === 0
+        }
+        let q: string[] = [contract.data as string]
+        if (validate(q[0])) {
+            return q
+        }
+        const visited = new Set([contract.data as string])
+        while (q.length > 0) {
+            const nextq: string[] = []
+            const validated = q.filter(exp => validate(exp))
+            if (validated.length > 0) {
+                return validated
+            }
+            for (const exp of q) {
+                for (let i = 0; i < exp.length; i++) {
+                    if (exp[i] === "(" || exp[i] === ")") {
+                        const nextExp = `${exp.slice(0, i)}${exp.slice(i + 1)}`
+                        if (!visited.has(nextExp)) {
+                            visited.add(nextExp)
+                            nextq.push(nextExp)
+                        }
+                    }
+                }
+            }
+            q = nextq
+        }
+        return [""]
+    },
+    "Find All Valid Math Expressions": (contract) => {
+        // ! This is something new
+        const data = contract.data as (number | string)[]
+        const digits = data[0] as string
+        const target = data[1] as number
+        const expList: string[] = []
+        const dfs = (i: number, exp: string, current: number, lastMatched: number) => {
+            if (i === digits.length) {
+                // const parsed = evaluate(exp)
+                if (current === target) {
+                    expList.push(exp.replaceAll("(", "").replaceAll(")", ""))
+                }
+                return
+            }
+            for (let j = i + 1; j <= digits.length; j++) {
+                const slice = digits.slice(i, j)
+                if (slice.length > 1 && slice.startsWith("0")) {
+                    break
+                }
+                const seek = parseInt(`${slice}`)
+                if (exp.length === 0) {
+                    dfs(j, `${slice}`, seek, seek)
+                } else {
+                    dfs(j, `${exp}+${slice}`, current + seek, seek)
+                    dfs(j, `${exp}-${slice}`, current - seek, -seek)
+                    dfs(j, `${exp}*${slice}`, current - lastMatched + lastMatched * seek, lastMatched * seek)
+                }
+            }
+        }
+        dfs(0, "", 0, 0)
+        return [...new Set(expList)]
+    },
+    "HammingCodes: Integer to Encoded Binary": (contract) => {
+        const data = contract.data as number
+        return HammingEncode(data)
+    },
+    "HammingCodes: Encoded Binary to Integer": (contract) => {
+        const data = contract.data as string
+        return HammingDecode(data)
+    },
+    "Proper 2-Coloring of a Graph": (contract) => {
+        const data = contract.data as [number, [number, number][]]
+        const vertexN = data[0], edges = data[1]
+        const graph = Array.from({ length: vertexN }, () => new Set<number>())
+        const cliques = new Set<number>()
+        for (const [u, v] of edges) {
+            graph[u].add(v)
+            graph[v].add(u)
+            cliques.add(u)
+            cliques.add(v)
+        }
+        const floodGraph = (entry: number, color: boolean, colored: Map<number, boolean>): boolean => {
+            const q: [number, boolean][] = [[entry, color]]
+            while (q.length > 0) {
+                const [node, fill] = q.shift()!
+                for (const adj of graph[node]) {
+                    if (colored.has(adj)) {
+                        if (colored.get(adj)! === fill) {
+                            return false
+                        }
+                    } else {
+                        colored.set(adj, !fill)
+                        q.push([adj, !fill])
+                    }
+                }
+            }
+            return true
+        }
+        const colored = new Map<number, boolean>()
+        for (const entry of cliques.values()) {
+            if (colored.has(entry)) {
+                continue
+            }
+            if (!floodGraph(entry, false, colored)) {
+                return []
+            }
+        }
+        return Array.from({ length: vertexN }, (_, i) => +(colored.get(i) ?? false))
+    },
     "Compression I: RLE Compression": (contract) => {
         const data = contract.data as string
         let index = 0
@@ -292,41 +699,33 @@ export const ContractSolves: Record<CodingContractName, (contract: CodingContrac
             }
         }
         const gap = data - best ** 2n
-        return (best + 1n) ** 2n - data > gap ? best.toString() : (best + 1n).toString()
-    },
+        return (best + 1n) ** 2n - data > gap ? best : (best + 1n)
+    }
 }
-// 206709625724006811140813487909831373025219028355997607627414262977965774730713682504812082369494140339024924919306060125610274792098457600859195566446517278014713829766811044324223837215531593471547811
-// 206709625724006811140813487909831373025219028355997607627414262977965774730713682504812082369494140324647525094441801620307315320549895225697173960832335549154332014141054260912440631293274839767403396
-// type ArrayLikeResult = string | number | ArrayLikeResult[];
-// function findArray(text: string, firstOnly: boolean = true): ArrayLikeResult[] {
-//     const has_subGroup = /^(.*?)\[(.*)\](.*?)$/
-//     const format = (m: RegExpMatchArray) => {
-//         return {
-//             prefix: m[1],
-//             subGroup: m[2],
-//             suffix: m[3]
+
+// console.log(((contract) => {
+//     const data = contract.data as number[][]
+//     const endRow = data.length - 1
+//     const minSum = Array.from({ length: data.length }, (_, i) => Array.from({ length: data[i].length }, () => Infinity))
+//     const q: { i: number, j: number, sum: number }[] = [{ i: 0, j: 0, sum: data[0][0] }]
+//     minSum[0][0] = data[0][0]
+//     let min = Infinity
+//     while (q.length > 0) {
+//         const { i, j, sum } = q.shift()!
+//         if (i === endRow) {
+//             min = Math.min(min, sum)
+//             continue
+//         }
+//         if (minSum[i][j] < sum) {
+//             continue
+//         }
+//         for (const nj of [j, j + 1]) {
+//             const ni = i + 1
+//             if (ni <= endRow && nj < minSum[ni].length && (minSum[ni][nj] === -1 || minSum[ni][nj] > (sum + data[ni][nj]))) {
+//                 minSum[ni][nj] = sum + data[ni][nj]
+//                 q.push({ i: ni, j: nj, sum: sum + data[ni][nj] })
+//             }
 //         }
 //     }
-//     const matchedLines = text.split(/\n/)
-//         .map(line => line.trim())
-//         .map(line => line.match(has_subGroup))
-//         .filter(m => m !== null).map(m => m[2])
-//     if (matchedLines.length === 0) return []
-//     const spliter = (text: string) => text.split(",")
-//         .map(s => s.trim())
-//         .filter(s => s.length > 0)
-//         .map(s => s.match(/".*"/) ? s.slice(1, -1) : parseInt(s))
-//         .filter(n => !Number.isNaN(n))
-//     const extractRecusive = (text: string): ArrayLikeResult[] => {
-//         const m = text.match(has_subGroup)
-//         if (m) {
-//             const groups = format(m)
-//             return [...spliter(groups.prefix), extractRecusive(groups.subGroup), ...spliter(groups.suffix)]
-//         }
-//         return [...spliter(text)]
-//     }
-//     if (firstOnly) {
-//         return extractRecusive(matchedLines[0])
-//     }
-//     return matchedLines.map(extractRecusive)
-// }
+//     return min
+// })({ data: [[1], [9, 5], [4, 5, 4], [2, 2, 5, 5], [8, 2, 1, 4, 4], [1, 7, 3, 6, 2, 8], [9, 2, 2, 2, 6, 4, 6], [9, 8, 3, 2, 9, 8, 4, 5], [1, 9, 8, 8, 6, 2, 6, 4, 7], [8, 6, 5, 6, 3, 8, 8, 3, 3, 1], [7, 9, 9, 2, 1, 6, 2, 5, 5, 5, 4]] }))
