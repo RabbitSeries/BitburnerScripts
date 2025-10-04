@@ -2,7 +2,7 @@ import type { CodingContractName, CodingContractObject, CodingContractSignatures
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
 export async function main(ns: NS) {
-    const ContractName = "Find All Valid Math Expressions"
+    const ContractName = "Find All Valid Math Expressions" as CodingContractName
     const total = 100
     const now = Date.now()
     if (ns.args.length === 0) {
@@ -12,7 +12,7 @@ export async function main(ns: NS) {
     } else if (ns.args[0] === "ALL") {
         for (const [Name] of Object.entries(ContractSolves)) {
             // const thisNow = Date.now()
-            ns.tprint(`${Name}: ${await RunTests(ns, Name, total)}/${total}`)
+            ns.tprint(`${Name}: ${await RunTests(ns, Name as CodingContractName, total)}/${total}`)
             // ns.tprint("This costs: ", ns.tFormat(Date.now() - thisNow, true))
         }
     } else {
@@ -20,7 +20,7 @@ export async function main(ns: NS) {
         const filename = ns.codingcontract.createDummyContract(ContractName)
         const contract = ns.codingcontract.getContract(filename, "home")
         await ns.prompt(contract.type + "\n" + contract.description)
-        const result = ContractSolves[contract.type](contract)
+        const result = solveContract(contract)
         const submit = await ns.prompt(`${result}`)
         if (result === null || !submit) {
             return
@@ -37,13 +37,17 @@ export async function main(ns: NS) {
     }
     ns.tprint("Total cost: ", ns.tFormat(Date.now() - now, true))
 }
-export async function RunTests(ns: NS, ContractName: string | CodingContractName, times: number) {
+// Add this to avoid eslint matching, just erase the syntax
+function solveContract<T extends CodingContractName>(contract: Extract<CodingContractObject, { type: T }>) {
+    return ContractSolves[contract.type](contract);
+}
+export async function RunTests(ns: NS, ContractName: CodingContractName, times: number) {
     let count = 0
     for (let i = 0; i < times; i++) {
         try {
             const filename = ns.codingcontract.createDummyContract(ContractName)
             const contract = ns.codingcontract.getContract(filename, "home")
-            const result = ContractSolves[contract.type](contract)
+            const result = solveContract(contract)
             if (result === null || ns.codingcontract.attempt(result, filename, "home").trim().length === 0) {
                 ns.tprint("Failed on: ", contract.data)
                 ns.tprint("My guess: ", result)
@@ -57,10 +61,6 @@ export async function RunTests(ns: NS, ContractName: string | CodingContractName
     }
     return count
 }
-
-type ResultType = {
-    [T in keyof CodingContractSignatures]: CodingContractSignatures[T][1] | null;
-}[keyof CodingContractSignatures];
 
 const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number => {
     const DayN = prices.length
@@ -114,7 +114,7 @@ const isPowOf2 = (num: number) => {
     return true
 }
 
-const HammingEncode = (data: number): ResultType => {
+const HammingEncode = (data: number) => {
     const binary = [...data.toString(2)]
     const CorrectionCodeBitsN = (dataLen: number) => {
         //  2^k  - 1 >= n+k
@@ -190,9 +190,11 @@ const HammingDecode = (data: string) => {
     }
 }
 
-export const ContractSolves: Record<keyof CodingContractSignatures, (contract: CodingContractObject) => ResultType> = {
+// Use this and "add missing properties" to generate all solutions
+// export const ContractSolves: Record<CodingContractName, ()=>null>
+export const ContractSolves: { [T in CodingContractName]: (contract: Extract<CodingContractObject, { type: T }>) => (CodingContractSignatures[T][1] | null) } = {
     "Find Largest Prime Factor": (contract) => {
-        let data = contract.data as number
+        let data = contract.data
         const factor = (input: number) => {
             for (let i = 2; i <= Math.floor(Math.sqrt(input)); i++) {
                 if (input % i === 0) {
@@ -212,7 +214,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return data
     },
     "Subarray with Maximum Sum": (contract) => {
-        const data = contract.data as number[]
+        const data = contract.data
         const maxSum: number[] = [0, ...data]
         const prefix = [0]
         data.forEach((v, i) => prefix.push(v + prefix[i]))
@@ -227,7 +229,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return max
     },
     "Total Ways to Sum": (contract) => {
-        const num = contract.data as number
+        const num = contract.data
         const count = Array.from<number[]>({ length: num + 1 }).map(() => new Map<number, number>());
         count[0].set(0, 1)
         for (let i = 1; i <= num; i++) {
@@ -243,8 +245,8 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
             .reduce((a, b) => a + b, 0)
     },
     "Total Ways to Sum II": (contract) => {
-        const data = contract.data as (number | number[])[]
-        const num = data[0] as number, part = data[1] as number[]
+        const data = contract.data
+        const num = data[0], part = data[1]
         const ways = Array.from({ length: num + 1 }, () => 0)
         ways[0] = 1
         for (let i = 1; i <= part.length; i++) {
@@ -255,7 +257,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return ways[num]
     },
     "Spiralize Matrix": (contract) => {
-        const data = contract.data as number[][]
+        const data = contract.data
         const rows = data.length, cols = data[0].length
         const visited = Array.from({ length: rows }, () => Array.from<boolean>({ length: cols }).fill(false))
         let direction = 0, i = 0, j = 0
@@ -275,7 +277,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return result
     },
     "Array Jumping Game": (contract) => {
-        const data = contract.data as number[]
+        const data = contract.data
         const dfs = (i: number): boolean => {
             if (i >= data.length - 1) return true
             for (let j = i + data[i]; j >= i + 1; j--) {
@@ -285,10 +287,10 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
             }
             return false
         }
-        return +dfs(0)
+        return +dfs(0) as (0 | 1)
     },
     "Array Jumping Game II": (contract) => {
-        const data = contract.data as number[]
+        const data = contract.data
         if (data[0] === 0) {
             return 0
         }
@@ -306,7 +308,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return minJmp === Infinity ? 0 : minJmp
     },
     "Merge Overlapping Intervals": (contract) => {
-        const data = contract.data as [number, number][]
+        const data = contract.data
         data.sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0])
         const sorted = [data[0]]
         for (const [l, r] of data.slice(1)) {
@@ -320,7 +322,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return sorted
     },
     "Generate IP Addresses": (contract) => {
-        const data = contract.data as string
+        const data = contract.data
         const ipList: string[] = []
         const dfs = (i: number, ip: string[]) => {
             if (i === data.length) {
@@ -342,7 +344,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return ipList
     },
     "Algorithmic Stock Trader I": (contract) => {
-        const parsed = contract.data as number[]
+        const parsed = contract.data
         let minBuyPrice = Infinity, profit = -Infinity
         for (const price of parsed) {
             minBuyPrice = Math.min(price, minBuyPrice)
@@ -351,18 +353,18 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return Math.max(profit, 0)
     },
     "Algorithmic Stock Trader II": (contract) => {
-        const parsed = contract.data as number[]
+        const parsed = contract.data
         const prices = [Infinity, ...parsed]
         return prices.map((v, i) => v - prices[i - 1]).filter(v => v > 0).reduce((a, b) => a + b, 0)
     },
-    "Algorithmic Stock Trader III": (contract) => AlgorithmicStockTraderSolver(2, contract.data as number[]),
+    "Algorithmic Stock Trader III": (contract) => AlgorithmicStockTraderSolver(2, contract.data),
     "Algorithmic Stock Trader IV": (contract) => {
         // ! This is something new, I have another statemathine solution, but complex
-        const parsed = contract.data as (number | number[])[]
-        return AlgorithmicStockTraderSolver(parsed[0] as number, parsed[1] as number[])
+        const parsed = contract.data
+        return AlgorithmicStockTraderSolver(parsed[0], parsed[1])
     },
     "Minimum Path Sum in a Triangle": (contract) => {
-        const data = contract.data as number[][]
+        const data = contract.data
         const endRow = data.length - 1
         const minSum = Array.from({ length: data.length }, (_, i) => Array.from({ length: data[i].length }, () => Infinity))
         const q: { i: number, j: number, sum: number }[] = [{ i: 0, j: 0, sum: data[0][0] }]
@@ -388,16 +390,16 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return min
     },
     "Unique Paths in a Grid I": (contract) => {
-        const [rows, cols] = contract.data as [number, number]
-        const graph = Array.from({ length: rows as number }, () => Array.from({ length: cols }, () => 0))
+        const [rows, cols] = contract.data
+        const graph = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0))
         return UniquePathsInAGridSolver(graph)
     },
     "Unique Paths in a Grid II": (contract) => {
-        const graph = contract.data as number[][]
+        const graph = contract.data
         return UniquePathsInAGridSolver(graph)
     },
     "Shortest Path in a Grid": (contract) => {
-        const graph = contract.data as number[][]
+        const graph = contract.data
         const rows = graph.length, cols = graph[0].length
         const isValid = (x: number, y: number) => x >= 0 && y >= 0 && x < rows && y < cols && graph[x][y] !== 1
         const pq: { x: number, y: number, path: string }[] = [{ x: 0, y: 0, path: "" }]
@@ -444,11 +446,11 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
             }
             return stack.length === 0
         }
-        let q: string[] = [contract.data as string]
+        let q: string[] = [contract.data]
         if (validate(q[0])) {
             return q
         }
-        const visited = new Set([contract.data as string])
+        const visited = new Set([contract.data])
         while (q.length > 0) {
             const nextq: string[] = []
             const validated = q.filter(exp => validate(exp))
@@ -472,9 +474,8 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
     },
     "Find All Valid Math Expressions": (contract) => {
         // ! This is something new
-        const data = contract.data as (number | string)[]
-        const digits = data[0] as string
-        const target = data[1] as number
+        const data = contract.data
+        const digits = data[0], target = data[1]
         const expList: string[] = []
         const dfs = (i: number, exp: string, current: number, lastMatched: number) => {
             if (i === digits.length) {
@@ -503,15 +504,15 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return [...new Set(expList)]
     },
     "HammingCodes: Integer to Encoded Binary": (contract) => {
-        const data = contract.data as number
+        const data = contract.data
         return HammingEncode(data)
     },
     "HammingCodes: Encoded Binary to Integer": (contract) => {
-        const data = contract.data as string
+        const data = contract.data
         return HammingDecode(data)
     },
     "Proper 2-Coloring of a Graph": (contract) => {
-        const data = contract.data as [number, [number, number][]]
+        const data = contract.data
         const vertexN = data[0], edges = data[1]
         const graph = Array.from({ length: vertexN }, () => new Set<number>())
         const cliques = new Set<number>()
@@ -547,10 +548,10 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
                 return []
             }
         }
-        return Array.from({ length: vertexN }, (_, i) => +(colored.get(i) ?? false))
+        return Array.from({ length: vertexN }, (_, i) => +(colored.get(i) ?? false)) as (0 | 1)[]
     },
     "Compression I: RLE Compression": (contract) => {
-        const data = contract.data as string
+        const data = contract.data
         let index = 0
         const result: { len: number, char: string }[] = []
         while (index < data.length) {
@@ -564,7 +565,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return result.map(({ len, char }) => `${len}${char}`).join("")
     },
     "Compression II: LZ Decompression": (contract) => {
-        const data = contract.data as string
+        const data = contract.data
         let result = ""
         let index = 0
         let isReference = false
@@ -592,7 +593,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return result
     },
     "Compression III: LZ Compression": (contract) => {
-        const data = contract.data as string
+        const data = contract.data
         type state = {
             index: number,
             isReference: boolean
@@ -672,21 +673,21 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
         return result
     },
     "Encryption I: Caesar Cipher": (contract) => {
-        const parsed = contract.data as (string | number)[]
-        const plaintext = parsed[0] as string, shift = parsed[1] as number
+        const parsed = contract.data
+        const plaintext = parsed[0], shift = parsed[1]
         const raw = Array.from({ length: 26 }, (_, i) => String.fromCharCode("A".charCodeAt(0) + i))
         const shifted = [...raw.slice((raw.length - shift) % 26), ...raw.slice(0, (raw.length - shift) % 26)]
         return [...plaintext].map(char => char === " " ? char : shifted[char.charCodeAt(0) - "A".charCodeAt(0)]).join("")
     },
     "Encryption II: Vigenère Cipher": (contract) => {
         const square = Array.from({ length: 26 }).map((_, rowBase) => Array.from({ length: 26 }).map((_, col) => String.fromCharCode((rowBase + col) % 26 + "A".charCodeAt(0))).join(""))
-        const parsed = contract.data as string[]
-        const plaintext = parsed[0] as string, keyword = parsed[1] as string
+        const parsed = contract.data
+        const plaintext = parsed[0], keyword = parsed[1]
         return [...plaintext].map((text, i) => square[text.charCodeAt(0) - "A".charCodeAt(0)][keyword[i % keyword.length].charCodeAt(0) - "A".charCodeAt(0)]).join("")
     },
     "Square Root": (contract) => {
         // TODO Add Digit by digit method
-        const data = contract.data as bigint
+        const data = contract.data
         let l = 0n, r = data
         let best = 0n
         while (l <= r) {
@@ -704,7 +705,7 @@ export const ContractSolves: Record<keyof CodingContractSignatures, (contract: C
 }
 
 // console.log(((contract) => {
-//     const data = contract.data as number[][]
+//     const data = contract.data
 //     const endRow = data.length - 1
 //     const minSum = Array.from({ length: data.length }, (_, i) => Array.from({ length: data[i].length }, () => Infinity))
 //     const q: { i: number, j: number, sum: number }[] = [{ i: 0, j: 0, sum: data[0][0] }]
