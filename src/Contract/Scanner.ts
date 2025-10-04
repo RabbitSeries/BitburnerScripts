@@ -2,7 +2,7 @@ import type { CodingContractName, CodingContractObject, CodingContractSignatures
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
 export async function main(ns: NS) {
-    const ContractName = "Find All Valid Math Expressions" as CodingContractName
+    const ContractName = "HammingCodes: Encoded Binary to Integer" as CodingContractName
     const total = 100
     const now = Date.now()
     if (ns.args.length === 0) {
@@ -102,20 +102,11 @@ const UniquePathsInAGridSolver = (graph: number[][]) => {
     return paths[rows - 1][cols - 1]
 }
 
-// For hamming code solvers
-const isPowOf2 = (num: number) => {
-    if (num === 0) {
-        return false
-    }
-    while (num > 1) {
-        if (num % 2 !== 0) return false
-        num >>= 1
-    }
-    return true
-}
+// Took some time to prove the concept of parity:
+const Parity = (data: (0 | 1)[]) => data.map((v, i) => (i === 0 || v === 0) ? 0 : i).reduce((a, b) => a ^ b, 0)
 
 const HammingEncode = (data: number) => {
-    const binary = [...data.toString(2)]
+    const binary = [...data.toString(2)].map(v => parseInt(v)) as (0 | 1)[]
     const CorrectionCodeBitsN = (dataLen: number) => {
         //  2^k  - 1 >= n+k
         let l = 0, r = Math.floor(3 + Math.log2(dataLen))
@@ -132,62 +123,23 @@ const HammingEncode = (data: number) => {
         return best
     }
     const corrN = CorrectionCodeBitsN(binary.length)
-    let i = 0
+    let mixed = 0
     const totalLen = corrN + binary.length
-    const encoded = Array.from({ length: totalLen + 1 }, (_, j) => {
-        if (j === 0 || isPowOf2(j)) {
-            return 0 // original correction bits should be 0
-        } else {
-            return parseInt(binary[i++])
-        }
-    })
-    for (let corr = 1; corr <= totalLen; corr++) {
-        let base = 0
-        let currIndex = corr
-        while (currIndex > 0) {
-            if (currIndex % 2 === 1) {
-                encoded[2 ** base] ^= encoded[corr]
-            }
-            currIndex >>= 1
-            base++
-        }
-    }
-    for (let corr = 1; corr <= totalLen; corr++) {
-        encoded[0] = encoded[0] ^ encoded[corr]
-    }
+    const encoded = Array.from({ length: totalLen + 1 }, (_, j) =>
+        (j & (j - 1)) === 0 ? 0 : binary[mixed++]// original correction bits should be 0
+    )
+    const parity = [...Parity(encoded).toString(2)]
+    // From bit 1 to bit k, mix into encoded in appropriate decode index, hamming code ues 2^i
+    parity.reverse().map(v => parseInt(v)).forEach((v, i) => encoded[2 ** i] |= v)
+    encoded[0] = encoded.reduce((a, b) => (a ^ b) as (0 | 1), 0)// Mix the extended bit, make the 1 bit's count even 
     return encoded.join("")
 }
 
 const HammingDecode = (data: string) => {
-    const encoded = data
-    //? Uncaught TypeError TypeError: String.prototype.matchAll called with a non-global RegExp argument
-    // add a g
-    const isEven = (encoded.matchAll(/[1]/g).toArray().length % 2) === 0
-    const decoder = (bits: string[]) => parseInt(bits.map((v, i) => (i === 0 || isPowOf2(i)) ? null : v).filter(v => v !== null).join(""), 2)
-    if (isEven) {
-        return decoder([...encoded])
-    } else {
-        const Verifications = [...encoded].map(() => 0)
-        for (let corr = 1; corr < encoded.length; corr++) {
-            let currIndex = corr
-            let base = 0
-            while (currIndex > 0) {
-                if (currIndex % 2 === 1) {
-                    Verifications[2 ** base] ^= parseInt(encoded[corr], 2)
-                }
-                currIndex >>= 1
-                base++
-            }
-        }
-        const location = Verifications.map((v, i) => v === 0 ? 0 : i).reduce((a, b) => a + b, 0)
-        return decoder([...encoded].map((v, i) => {
-            if (i === location) {
-                return (v === "0") ? "1" : "0"
-            } else {
-                return v
-            }
-        }))
-    }
+    const binary = [...data].map(v => parseInt(v)) as (0 | 1)[]
+    const verification = Parity(binary)
+    binary[verification] ^= 1 // Reverse this bit if 1's count is not even and verification is not 0, this is actually wrong, but whatever
+    return parseInt(binary.map((v, i) => (i & (i - 1)) === 0 ? "" : v).join(""), 2)
 }
 
 // Use this and "add missing properties" to generate all solutions
