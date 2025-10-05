@@ -1,8 +1,13 @@
+// -------------------------------------------------------------------------------
+// Language                     files          blank        comment           code
+// -------------------------------------------------------------------------------
+// TypeScript                       1              7            107            582(Average 20.7 per solution)
+// -------------------------------------------------------------------------------
 import type { CodingContractName, CodingContractObject, CodingContractSignatures, NS } from "@ns"
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
 export async function main(ns: NS) {
-    const ContractName = "HammingCodes: Encoded Binary to Integer" as CodingContractName
+    const ContractName = "Algorithmic Stock Trader IV" as CodingContractName
     const total = 100
     const now = Date.now()
     if (ns.args.length === 0) {
@@ -65,42 +70,41 @@ export async function RunTests(ns: NS, ContractName: CodingContractName, times: 
 const AlgorithmicStockTraderSolver = (TransN: number, prices: number[]): number => {
     const DayN = prices.length
     prices = [0, ...prices] /* Index from 1 */
-    const holding = Array.from({ length: DayN + 1 }, () => Array(TransN + 1).fill(0)),
-        sold = Array.from({ length: DayN + 1 }, () => Array(TransN + 1).fill(0))
+    const holding = Array<number>(TransN + 1).fill(0),
+        sold = Array<number>(TransN + 1).fill(0)
     for (let day = 1; day <= DayN; day++) {
-        for (let trans = 0; trans <= TransN; trans++) {
-            holding[day][trans] = Math.max(day > 1 ? holding[day - 1][trans] : -Infinity/* Impossible holding at day 0 */, sold[day - 1][trans] - prices[day])
-            sold[day][trans] = Math.max(sold[day - 1][trans], (day > 1 && trans > 0) ? holding[day - 1][trans - 1] + prices[day] : -Infinity/* 
-                Impossible holding at trans -1
-            */)
+        for (let trans = TransN; trans >= 0; trans--) {
+            holding[trans] = Math.max(day > 1 ? holding[trans] : -Infinity/* Impossible holding at day 0 */, sold[trans] - prices[day])
+            sold[trans] = Math.max(sold[trans], (day > 1 && trans > 0) ? holding[trans - 1] + prices[day] : -Infinity /* Impossible holding at trans -1*/)
         }
     }
-    return sold[DayN][TransN]
+    return sold[TransN]
 }
 
-const UniquePathsInAGridSolver = (graph: number[][]) => {
-    const rows = graph.length, cols = graph[0].length
-    const isValid = (x: number, y: number) => x >= 0 && y >= 0 && x < rows && y < cols && graph[x][y] !== 1
-    const begin = [0, 0]
-    const paths = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0))
-    const q = [begin]
-    const visited = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false))
-    visited[0][0] = true
-    paths[0][0] = 1
-    while (q.length > 0) {
-        const [x, y] = q.shift()!
-        for (const [nx, ny] of [[x + 1, y], [x, y + 1]]) {
-            if (isValid(nx, ny)) {
-                paths[nx][ny] += paths[x][y]
-                if (!visited[nx][ny]) {
-                    visited[nx][ny] = true
-                    q.push([nx, ny])
-                }
-            }
-        }
-    }
-    return paths[rows - 1][cols - 1]
-}
+// heuristics
+// const UniquePathsInAGridSolver = (graph: number[][]) => {
+//     const rows = graph.length, cols = graph[0].length
+//     const isValid = (x: number, y: number) => x >= 0 && y >= 0 && x < rows && y < cols && graph[x][y] !== 1
+//     const begin = [0, 0]
+//     const paths = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0))
+//     const q = [begin]
+//     const visited = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false))
+//     visited[0][0] = true
+//     paths[0][0] = 1
+//     while (q.length > 0) {
+//         const [x, y] = q.shift()!
+//         for (const [nx, ny] of [[x + 1, y], [x, y + 1]]) {
+//             if (isValid(nx, ny)) {
+//                 paths[nx][ny] += paths[x][y]
+//                 if (!visited[nx][ny]) {
+//                     visited[nx][ny] = true
+//                     q.push([nx, ny])
+//                 }
+//             }
+//         }
+//     }
+//     return paths[rows - 1][cols - 1]
+// }
 
 // Took some time to prove the concept of parity:
 const Parity = (data: (0 | 1)[]) => data.map((v, i) => (i === 0 || v === 0) ? 0 : i).reduce((a, b) => a ^ b, 0)
@@ -304,36 +308,68 @@ export const ContractSolves: { [T in CodingContractName]: ({ data }: Extract<Cod
         return AlgorithmicStockTraderSolver(parsed[0], parsed[1])
     },
     "Minimum Path Sum in a Triangle": ({ data }) => {
-        const endRow = data.length - 1
-        const minSum = Array.from({ length: data.length }, (_, i) => Array.from({ length: data[i].length }, () => Infinity))
-        const q: { i: number, j: number, sum: number }[] = [{ i: 0, j: 0, sum: data[0][0] }]
-        minSum[0][0] = data[0][0]
-        let min = Infinity
-        while (q.length > 0) {
-            const { i, j, sum } = q.shift()!
-            if (i === endRow) {
-                min = Math.min(min, sum)
-                continue
-            }
-            if (minSum[i][j] < sum) {
-                continue
-            }
-            for (const nj of [j, j + 1]) {
-                const ni = i + 1
-                if (ni <= endRow && nj < minSum[ni].length && (minSum[ni][nj] === -1 || minSum[ni][nj] > (sum + data[ni][nj]))) {
-                    minSum[ni][nj] = sum + data[ni][nj]
-                    q.push({ i: ni, j: nj, sum: sum + data[ni][nj] })
+        const dp = Array.from({ length: data.length }, () => 0)
+        for (let i = 0; i < data.length; i++) {
+            for (let j = data[i].length - 1; j >= 0; j--) {
+                if (i > 0 && j === data[i].length - 1) {
+                    dp[j] = dp[j - 1] // The last element in each row should use last row's last element's min sum at first
+                }
+                dp[j] += data[i][j] // Each element should use last row's j's min path sum, then plus data[i][j] to the sum
+                if (j > 0) {
+                    dp[j] = Math.min(dp[j - 1] + data[i][j], dp[j])
                 }
             }
         }
-        return min
+        return Math.min(...dp) // Reaching the last row is definite, just min them all
+        // heuristics
+        // const endRow = data.length - 1
+        // const minSum = Array.from({ length: data.length }, (_, i) => Array.from({ length: data[i].length }, () => Infinity))
+        // const q: { i: number, j: number, sum: number }[] = [{ i: 0, j: 0, sum: data[0][0] }]
+        // minSum[0][0] = data[0][0]
+        // let min = Infinity
+        // while (q.length > 0) {
+        //     const { i, j, sum } = q.shift()!
+        //     if (i === endRow) {
+        //         min = Math.min(min, sum)
+        //         continue
+        //     }
+        //     if (minSum[i][j] < sum) {
+        //         continue
+        //     }
+        //     for (const nj of [j, j + 1]) {
+        //         const ni = i + 1
+        //         if (ni <= endRow && nj < minSum[ni].length && (minSum[ni][nj] === -1 || minSum[ni][nj] > (sum + data[ni][nj]))) {
+        //             minSum[ni][nj] = sum + data[ni][nj]
+        //             q.push({ i: ni, j: nj, sum: sum + data[ni][nj] })
+        //         }
+        //     }
+        // }
+        // return min
     },
     "Unique Paths in a Grid I": ({ data: [rows, cols] }) => {
-        const graph = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0))
-        return UniquePathsInAGridSolver(graph)
+        const dp = Array.from({ length: cols }, () => 0)
+        dp[0] = 1
+        for (let i = 0; i < rows; i++) {
+            for (let j = 1; j < cols; j++) {
+                dp[j] += dp[j - 1] // const [nx, ny] of [[x + 1, y], [x, y + 1], dp[i][j] = dp[i-1][j] + dp[i-1][j-1]
+            }
+        }
+        return dp[cols - 1]
     },
     "Unique Paths in a Grid II": ({ data: graph }) => {
-        return UniquePathsInAGridSolver(graph)
+        const rows = graph.length, cols = graph[0].length
+        const dp = Array.from({ length: cols }, () => 0)
+        dp[0] = 1
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                if (graph[i][j] === 1) {
+                    dp[j] = 0  // Unreachable Overwrite the data
+                } else if (j + 1 < cols) {
+                    dp[j + 1] += dp[j]
+                }
+            }
+        }
+        return dp[cols - 1]
     },
     "Shortest Path in a Grid": ({ data: graph }) => {
         const rows = graph.length, cols = graph[0].length
