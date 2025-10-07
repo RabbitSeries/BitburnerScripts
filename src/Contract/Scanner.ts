@@ -3,18 +3,27 @@
 // -------------------------------------------------------------------------------
 // TypeScript                       1              7            107            582(Average 20.7 per solution)
 // -------------------------------------------------------------------------------
-import type { CodingContractName, CodingContractObject, CodingContractSignatures, NS } from "@ns"
+import type { CodingContractName, CodingContractObject, CodingContractSignatures, NS, ScriptArg } from "@ns"
+import { ScanAllServers } from "/Hack/HackHelpers"
 // Don't import {type NS} from "@ns"
 // instead import type {NS} from "@ns"
-export async function main(ns: NS) {
+export async function SolveContract(ns: NS, args: ScriptArg[] = []) {
     const ContractName = "Algorithmic Stock Trader IV" as CodingContractName
     const total = 100
     const now = Date.now()
-    if (ns.args.length === 0) {
+    if (args.length === 0) {
+        for (const host of ["home", ...ScanAllServers(ns).sorted]) {
+            ns.ls(host, ".cct").forEach(file => {
+                const contract = ns.codingcontract.getContract(file, host)
+                const result = solveContract(contract)
+                ns.tprint(host, ": ", ns.codingcontract.attempt(result, file, host))
+            })
+        }
+    } else if (args[0] === "TEST") {
         // ================================================================Test
         const susccess = await RunTests(ns, ContractName, total)
         ns.tprint(`${susccess}/${total}`)
-    } else if (ns.args[0] === "ALL") {
+    } else if (args[0] === "ALL") {
         for (const [Name] of Object.entries(ContractSolves)) {
             // const thisNow = Date.now()
             ns.tprint(`${Name}: ${await RunTests(ns, Name as CodingContractName, total)}/${total}`)
@@ -41,6 +50,10 @@ export async function main(ns: NS) {
         }
     }
     ns.tprint("Total cost: ", ns.tFormat(Date.now() - now, true))
+}
+
+export async function main(ns: NS) {
+    return SolveContract(ns, ns.args)
 }
 // Add this to avoid eslint matching, just erase the syntax
 function solveContract<T extends CodingContractName>(contract: Extract<CodingContractObject, { type: T }>) {

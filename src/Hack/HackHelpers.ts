@@ -1,6 +1,6 @@
 import type { NS, ScriptArg } from "@ns"
 import type { IMiner } from "./Miners/IMiner"
-import { MemSharer, Miners } from "./Miners/Miners"
+import { MemSharer, MinerPaths } from "./Miners/Miners"
 import { FreeRam } from "/utils/ServerStat"
 export function ScanAllServers(ns: NS) {
     const visited = new Set<string>()
@@ -73,7 +73,7 @@ export function TryHacking(ns: NS, miner: IMiner, ...args: ScriptArg[]): number 
         if (result === 0) {
             throw new Error(["ERROR: ", "Runing", scriptPath, "at", currentHost, "with ram", formated].join(" "))
         }
-        return result;
+        return result
     } catch (e) {
         ns.print(`ERROR: running ${scriptPath} on ${currentHost} hacking ${target} with threadOptions: ${threadOptions}`)
         ns.print(`${e instanceof Error ? e.message : String(e)}`)
@@ -115,11 +115,11 @@ export function Scp(ns: NS, destination: string): boolean {
 
 export const ShareOn = (ns: NS, host: string, time?: number): Promise<void> => {
     return new Promise((resolve) => {
-        ns.scriptKill(Miners.MemSharer.scriptPath, host)
-        new MemSharer(ns, host, Math.floor(FreeRam.bind(ns)(host) / ns.getScriptRam(Miners.MemSharer.scriptPath))).run()
+        ns.scriptKill(MinerPaths.MemSharer.scriptPath, host)
+        new MemSharer(ns, host, Math.floor(FreeRam.bind(ns)(host) / ns.getScriptRam(MinerPaths.MemSharer.scriptPath))).run()
         if (time !== undefined) {
             setTimeout(() => {
-                ns.scriptKill(Miners.MemSharer.scriptPath, host)
+                ns.scriptKill(MinerPaths.MemSharer.scriptPath, host)
                 resolve()
             }, time)
         } else {

@@ -1,19 +1,22 @@
 import type { NS } from "@ns"
 import { ShareOn } from "../HackHelpers"
-import { GrowMiner, HackMiner, Miners, WeakenMiner } from "../Miners/Miners"
+import { GrowMiner, HackMiner, MinerPaths, WeakenMiner } from "../Miners/Miners"
 import { FreeRam } from "/utils/ServerStat"
 export type Handler = (ns: NS, host: string) => void
 export const HostHandlers: Record<"KillallExceptHome" | "ShareExceptHome", Handler> = {
     KillallExceptHome: (ns, host) => { if (host !== "home") ns.killall(host) },
     ShareExceptHome: (ns, host) => { if (host !== "home") ShareOn(ns, host) }
 }
-export type TaskQueue = Promise<{ pid: number, host: string } | null>[]
+export type TaskQueue = { pid: number, host: string, awaiter: Promise<void> }[]
 export const AwaitTasks = async (ns: NS, taskq: TaskQueue) => {
+    if (taskq.length === 0) {
+        ns.tprint("Invalid target with current condition")
+        await new Promise(r => setTimeout(r, 1000))
+        return
+    }
     while (taskq.length > 0) {
-        const task = await taskq.shift()!
-        if (task === null) {
-            continue
-        }
+        const task = taskq.shift()!
+        await task.awaiter
         const watchDog = async () => {
             const running = ns.getRunningScript(task.pid)
             if (running) {
@@ -35,32 +38,31 @@ export function ScheduleWeakenTask(ns: NS, servers: string[], target: string,
     postHandler: Handler = HostHandlers["ShareExceptHome"]
 ): TaskQueue {
     let totalWeakened = 0
-    const weakenUsage = ns.getScriptRam(Miners.WeakenMiner.scriptPath), weakenTime = ns.getWeakenTime(target)
+    const weakenUsage = ns.getScriptRam(MinerPaths.WeakenMiner.scriptPath), weakenTime = ns.getWeakenTime(target)
     const maxSecurity = ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target)
-    return servers.map(host => (async () => {
+    const taskq: TaskQueue = []
+    for (const host of servers) {
         preHandler(ns, host)
         if (totalWeakened >= maxSecurity) {
             postHandler(ns, host)
-            return null
+            continue
         }
         const cores = ns.getServer(host).cpuCores
         const threadBoost = Math.ceil(
             Math.min(Math.floor(FreeRam.bind(ns)(host) / weakenUsage),
                 Math.max(maxSecurity - totalWeakened, 0) / ns.weakenAnalyze(1, cores)))
         if (threadBoost === 0) {
-            return null
+            continue
         }
         // |=weaken 1======================================|
         const pid = new WeakenMiner(ns, host, target, threadBoost, 0).run()
         totalWeakened += ns.weakenAnalyze(threadBoost, cores)
         postHandler(ns, host)
         if (pid !== 0) {
-            await new Promise((resolve) => setTimeout(resolve, weakenTime + 50))
-            return { pid, host }
-        } else {
-            return null
+            taskq.push({ pid, host, awaiter: new Promise(r => setTimeout(r, weakenTime + 50)) })
         }
-    })())
+    }
+    return taskq
 }
 export function ScheduleHackTask(ns: NS, servers: string[], target: string,
     preHandler: Handler = HostHandlers["KillallExceptHome"],
@@ -68,7 +70,8 @@ export function ScheduleHackTask(ns: NS, servers: string[], target: string,
 ): TaskQueue {
     let scheduled = 0
     const hackTime = ns.getHackTime(target), growTime = ns.getGrowTime(target), weakenTime = ns.getWeakenTime(target)
-    return servers.map(host => (async () => {
+    const taskq: TaskQueue = []
+    for (const host of servers) {
         preHandler(ns, host)
         let remainRam = FreeRam.bind(ns)(host), lastTaskPid = 0
         while (remainRam >= 0) {
@@ -96,12 +99,10 @@ export function ScheduleHackTask(ns: NS, servers: string[], target: string,
         }
         postHandler(ns, host)
         if (lastTaskPid !== 0) {
-            await new Promise((resolve) => setTimeout(resolve, weakenTime + 50 + scheduled * 200))
-            return { pid: lastTaskPid, host }
-        } else {
-            return null
+            taskq.push({ pid: lastTaskPid, host, awaiter: new Promise(r => setTimeout(r, weakenTime + 50 + scheduled * 200)) })
         }
-    })())
+    }
+    return taskq
 }
 export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
     preHandler: Handler = HostHandlers["KillallExceptHome"],
@@ -109,7 +110,8 @@ export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
 ): TaskQueue {
     let scheduled = 0, totalGrowed = 1
     const growTime = ns.getGrowTime(target), weakenTime = ns.getWeakenTime(target), availableMoney = ns.getServerMoneyAvailable(target)
-    return servers.map(host => (async () => {
+    const taskq: TaskQueue = []
+    for (const host of servers) {
         preHandler(ns, host)
         let lastTaskPid = 0
         const threadBoost = FindWGThreads(ns, host, target, FreeRam.bind(ns)(host)),
@@ -117,7 +119,7 @@ export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
             cores = ns.getServer(host).cpuCores
         if (threadBoost === null || totalGrowed >= (maxMoney / availableMoney)) {
             postHandler(ns, host)
-            return null
+            continue
         }
         const { gThread, wThread } = threadBoost
         const lagBase = (scheduled++) * 100
@@ -135,12 +137,10 @@ export function ScheduleGrowTask(ns: NS, servers: string[], target: string,
         }
         postHandler(ns, host)
         if (lastTaskPid !== 0) {
-            await new Promise((resolve) => setTimeout(resolve, weakenTime + scheduled * 100))
-            return { pid: lastTaskPid, host }
-        } else {
-            return null
+            taskq.push({ pid: lastTaskPid, host, awaiter: new Promise((resolve) => setTimeout(resolve, weakenTime + scheduled * 100)) })
         }
-    })())
+    }
+    return taskq
 }
 export function GrowthPercent(ns: NS, growThread: number, cores: number, target: string) {
     const avai = ns.getServerMoneyAvailable(target)
@@ -175,9 +175,9 @@ export function GrowThread(ns: NS, hackThread: number, target: string, cores: nu
     return Math.ceil(ns.growthAnalyze(target, 1 / (1 - hackPercent), cores))
 }
 export function FindMaxHGWThreads(ns: NS, host: string, target: string, freeRam: number) {// Hack Weaken Grow Weaken
-    const hackUsage = ns.getScriptRam(Miners.HackMiner.scriptPath),
-        weakenUsage = ns.getScriptRam(Miners.WeakenMiner.scriptPath),
-        growUsage = ns.getScriptRam(Miners.GrowMiner.scriptPath),
+    const hackUsage = ns.getScriptRam(MinerPaths.HackMiner.scriptPath),
+        weakenUsage = ns.getScriptRam(MinerPaths.WeakenMiner.scriptPath),
+        growUsage = ns.getScriptRam(MinerPaths.GrowMiner.scriptPath),
         cores = ns.getServer(host).cpuCores
     let l = 1, r = Math.floor(Math.min(freeRam / hackUsage, 0.9999 / ns.hackAnalyze(target)))
     let optimal: { hThread: number, wThread1: number, gThread: number, wThread2: number, ram: number } | undefined = undefined
@@ -196,11 +196,12 @@ export function FindMaxHGWThreads(ns: NS, host: string, target: string, freeRam:
     return optimal ?? null
 }
 export function FindWGThreads(ns: NS, host: string, target: string, freeRam: number) { // Weaken Grow
-    const weakenUsage = ns.getScriptRam(Miners.WeakenMiner.scriptPath),
-        growUsage = ns.getScriptRam(Miners.GrowMiner.scriptPath),
+    const weakenUsage = ns.getScriptRam(MinerPaths.WeakenMiner.scriptPath),
+        growUsage = ns.getScriptRam(MinerPaths.GrowMiner.scriptPath),
         cores = ns.getServer(host).cpuCores
     const avai = ns.getServerMoneyAvailable(target), max = ns.getServerMaxMoney(target)
-    let l = 1, r = Math.min(Math.floor(freeRam / growUsage), Math.ceil(ns.growthAnalyze(target, max / (avai ?? max), cores)))
+    if (max === 0) return null
+    let l = 1, r = Math.min(Math.floor(freeRam / growUsage), Math.ceil(ns.growthAnalyze(target, max / (avai === 0 ? max : avai), cores)))
     let optimal: { gThread: number, wThread: number, ram: number } | undefined = undefined
     // Binary search
     while (l <= r) {

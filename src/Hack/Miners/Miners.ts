@@ -5,37 +5,35 @@ import * as HackHelpers from "/Hack/HackHelpers"
 import { HackTask } from "../HackHelpers"
 import { FreeRam } from "/utils/ServerStat"
 const prefix = "Hack/Scripts/"
-export const Miners = {
+export const MinerPaths: MinerPathSignatures = {
     RegularMiner: {
-        name: "RegularMiner",
         scriptPath: prefix + 'RegularMiner.js'
     },
     SingleTaskMiner: {
-        name: "SingleTaskMiner",
         scriptPath: prefix + 'SingleTaskMiner.js'
     },
     HackMiner: {
-        name: "HackMiner",
         scriptPath: prefix + 'HackMiner.js',
     },
     GrowMiner: {
-        name: "GrowMiner",
         scriptPath: prefix + 'GrowMiner.js',
     },
     WeakenMiner: {
-        name: "WeakenMiner",
         scriptPath: prefix + 'WeakenMiner.js',
     },
     MemSharer: {
-        name: "Memsharer",
         scriptPath: prefix + "MemSharer.js"
     }
+}
+type MinerNames = "RegularMiner" | "SingleTaskMiner" | "HackMiner" | "GrowMiner" | "WeakenMiner" | "MemSharer"
+export type MinerPathSignatures = {
+    [T in MinerNames]: { scriptPath: string }
 }
 
 export class RegularMiner implements IMiner {
     ns: NS
     args: IMinerArgs
-    scriptPath = Miners.RegularMiner.scriptPath
+    scriptPath = MinerPaths.RegularMiner.scriptPath
     threadOptions: number | RunOptions
     constructor(ns: NS, Args: IMinerArgs) {
         this.args = Args
@@ -53,7 +51,7 @@ export class SingleTaskMiner implements IMiner {
     ns: NS
     args: IMinerArgs
     task: HackTask
-    scriptPath = Miners.SingleTaskMiner.scriptPath
+    scriptPath = MinerPaths.SingleTaskMiner.scriptPath
     threadOptions: number | RunOptions
     constructor(ns: NS, Args: SingleTaskMinerArgs) {
         this.args = Args
@@ -66,7 +64,7 @@ export class SingleTaskMiner implements IMiner {
 export class HackMiner implements IMiner {
     args: IMinerArgs
     ns: NS
-    scriptPath = Miners.HackMiner.scriptPath
+    scriptPath = MinerPaths.HackMiner.scriptPath
     threadOptions: number
     additionalMsec: number
     constructor(ns: NS, hostName: string, targetName: string, threadOptions: number, additionalMsec: number) {
@@ -78,13 +76,13 @@ export class HackMiner implements IMiner {
     run = () => HackHelpers.TryHacking(this.ns, this, this.args.targetName, this.additionalMsec)
 }
 export class WeakenMiner extends HackMiner {
-    scriptPath = Miners.WeakenMiner.scriptPath
+    scriptPath = MinerPaths.WeakenMiner.scriptPath
 }
 export class GrowMiner extends HackMiner {
-    scriptPath = Miners.GrowMiner.scriptPath
+    scriptPath = MinerPaths.GrowMiner.scriptPath
 }
 export class MemSharer implements IMiner {
-    scriptPath: string = Miners.MemSharer.scriptPath
+    scriptPath: string = MinerPaths.MemSharer.scriptPath
     constructor(ns: NS, hostName: string, threadOptions: number) {
         this.args = { hostName, targetName: hostName }
         this.ns = ns

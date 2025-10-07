@@ -44,6 +44,7 @@ export class FullScheduler implements IMiner {
         const scan = servers === undefined
         while (!stop_token.is_stop_requested()) {
             if (scan) servers = ScanAllServers(ns).sorted.filter(s => ns.hasRootAccess(s) && ns.getServerMaxRam(s) > 0)
+            // const hackCondition = true,
             const hackCondition = ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target) >= 0.95,
                 weakenCondition = ns.getServerMinSecurityLevel(target) / ns.getServerSecurityLevel(target) <= 0.95
             const taskq: TaskQueue = []

@@ -30,9 +30,11 @@ export function TableHeader({ ns, setRanker }: { ns: NS, setRanker: (ranker: Com
         "Money": RootAccessRank(ns).thenSortBy(MaxMoneyRank(ns).compare),
         "Security": RootAccessRank(ns).thenSortBy(SecurityLevelRank(ns).compare),
         "HWG Time/mins": RootAccessRank(ns).thenSortBy(HackTimeRank(ns).compare),
+        "Growth": RootAccessRank(ns).thenSortBy((a, b) => ns.getServerGrowth(b) - ns.getServerGrowth(a)),
         "Current$/s": RootAccessRank(ns).thenSortBy(CurrentMoneyRateRank(ns).compare),
         "Potential$/s": RootAccessRank(ns).thenSortBy(PotentialMoneyRank(ns).compare),
         "RAM": RootAccessRank(ns).thenSortBy(Comparator.comparing(ns.getServerMaxRam).compare).reversed(),
+        "Contracts": Comparator.comparing<string>(host => ns.ls(host, ".cct").length).reversed(),
         "Cores": null
     })
     return <thead>

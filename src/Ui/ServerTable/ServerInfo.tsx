@@ -11,9 +11,11 @@ export interface IServer {
     Money: React.JSX.Element
     Secrurity: React.JSX.Element
     HackTime: React.JSX.Element
+    Growth: React.JSX.Element
     CurrMoneyRate: React.JSX.Element
     PotentialMoneyRate: React.JSX.Element
     RAM: React.JSX.Element
+    Contracts: React.JSX.Element
     CORES: React.JSX.Element
     Actions: React.JSX.Element
 }
@@ -28,6 +30,7 @@ export function Server(ns: NS, host: string, rowId: number): IServer {
         minSecurity: ns.getServerMinSecurityLevel(host),
         hackTime: ns.getHackTime(host),
         growTIme: ns.getGrowTime(host),
+        growth: ns.getServerGrowth(host),
         weakenTime: ns.getWeakenTime(host)
     }
     return {
@@ -43,9 +46,11 @@ export function Server(ns: NS, host: string, rowId: number): IServer {
             <td>{ns.formatNumber(stat.weakenTime / 1000 / 60, 1)} </td>
             <td>{ns.formatNumber(stat.growTIme / 1000 / 60, 1)}</td>
         </tbody>,
+        Growth: <td>{stat.growth}</td>,
         CurrMoneyRate: <td>{ns.formatNumber(CurrMoneyRate.bind(ns)(host), 1)}</td>,
         PotentialMoneyRate: <td>{ns.formatNumber(PotentialMoneyRate.bind(ns)(host), 1)}</td>,
         RAM: <td>{`${ns.formatNumber(stat.maxRam - stat.usedRam, 2)}/${ns.formatNumber(stat.maxRam, 2)}`}</td>,
+        Contracts: <td style={{ textAlign: "center" }}>{ns.ls(host, ".cct").length}</td>,
         CORES: <td>{ns.getServer(host).cpuCores}</td>,
         // Add a key to this, so the diff algorithm won't recreate new content for it
         Actions: <Actions key={host} host={host} ns={ns} ></Actions>

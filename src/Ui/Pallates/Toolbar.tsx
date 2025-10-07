@@ -3,12 +3,13 @@ import React, { useEffect, useRef } from "react"
 import { FindPathTo, ScanAllServers, TryNuke } from "/Hack/HackHelpers"
 import { upgradeLevelBy, upgradeLevelTo } from "/HacknetBuyer"
 import { StopToken, type JThread, type ProcessHandle } from "../OS/Process"
-import { MemSharer, Miners, RegularMiner, SingleTaskMiner } from "../../Hack/Miners/Miners"
+import { MemSharer, MinerPaths, RegularMiner, SingleTaskMiner, type MinerPathSignatures } from "../../Hack/Miners/Miners"
 import { HackTask } from "/Hack/HackHelpers"
 import { type Sorter } from "/utils/Comparators"
 import { FreeRam } from "/utils/ServerStat"
 import { FullScheduler, Schedulers } from "../../Hack/Schedulers/Schedulers"
 import { PuchaseServer } from "/ServerBuyer"
+// import { SolveContract } from "/Contract/Scanner"
 interface Notification {
     action: 'Expand' | 'Collapse'
 }
@@ -78,8 +79,12 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
         <label ref={levelTo} onClick={async ({ currentTarget }) =>
             currentTarget.textContent = `${Math.max(Math.min(+`${await ns.prompt("Upgrade to: ", { type: "text" })}`, 200), 0)}`}>{maxLevel()}</label>
         <button onClick={() => ns.prompt('Print path to: ', { type: "text" })
-            .then(r => FindPathTo(ns, `${r}`))
-            .then(r => ns.alert(`${r ? `home;${r.map(r => `connect ${r}`).join(";")};backdoor` : "NULL"}`)).catch()}>
+            .then(r => FindPathTo(ns, `${r}`.trim()))
+            .then(r => {
+                if (r) {
+                    ns.alert(`${`home;${r.map(r => `connect ${r}`).join(";")};backdoor`}`)
+                }
+            }).catch()}>
             Find Path
         </button>
         <button onClick={() => handle.close()}>Shut Down</button>
@@ -89,16 +94,16 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
                 if (targetName.length === 0) {
                     return
                 }
-                ns.prompt("Specify Miner", { type: "select", choices: [Miners.RegularMiner.scriptPath, Miners.SingleTaskMiner.scriptPath, "FullScheduler"] })
+                ns.prompt("Specify Miner", { type: "select", choices: [MinerPaths.RegularMiner.scriptPath, MinerPaths.SingleTaskMiner.scriptPath, "FullScheduler"] })
                     .then(async (choice) => {
-                        if (choice === Miners.RegularMiner.scriptPath) {
+                        if (choice === MinerPaths.RegularMiner.scriptPath) {
                             new RegularMiner(ns, {
                                 hostName: "home",
                                 targetName,
-                                threadOptions: Math.floor((ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) / ns.getScriptRam(Miners.RegularMiner.scriptPath))
+                                threadOptions: Math.floor((ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) / ns.getScriptRam(MinerPaths.RegularMiner.scriptPath))
                             }).run()
                         }
-                        else if (choice === Miners.SingleTaskMiner.scriptPath) {
+                        else if (choice === MinerPaths.SingleTaskMiner.scriptPath) {
                             const task = await ns.prompt("Specify task", { type: "select", choices: [HackTask.Hack, HackTask.Weaken, HackTask.Grow] })
                             if (task.toString() in HackTask) {
                                 new SingleTaskMiner(ns, {
@@ -125,14 +130,38 @@ export function Toolbar({ ns, handle, notifier, ranker }: { ns: NS, handle: Proc
                         ns.print("Started " + choice)
                     })
             }).catch(ns.tprint)}>Use Home Resources</button>
-        <button onClick={async () => ns.prompt("2^{Ram}:", { type: "text" }).then(r => PuchaseServer(ns, 2 ** (+r))).then(ns.print).catch(ns.tprint)}>Purchase a server</button>
-        <button onClick={async () => new MemSharer(ns, "home", Math.floor(FreeRam.bind(ns)("home") / ns.getScriptRam(Miners.MemSharer.scriptPath))).run()}>Share mem (HOME)</button>
+        <button onClick={async () => ns.prompt("2^{Ram}:", { type: "text" }).then(r => {
+            if (r.toString().length > 0) {
+                return PuchaseServer(ns, 2 ** (+r))
+            }else{
+                return "Invalid ram"
+            }
+        }).then(ns.print).catch(ns.tprint)}>Purchase a server</button>
+        <button onClick={async () => new MemSharer(ns, "home", Math.floor(FreeRam.bind(ns)("home") / ns.getScriptRam(MinerPaths.MemSharer.scriptPath))).run()}>Share mem (HOME)</button>
         <button onClick={async () => {
             for (const host of ScanAllServers(ns).sorted.filter(s => ns.hasRootAccess(s))) {
                 ns.killall(host)
-                const thread = Math.floor(FreeRam.bind(ns)(host) / ns.getScriptRam(Miners.MemSharer.scriptPath))
+                const thread = Math.floor(FreeRam.bind(ns)(host) / ns.getScriptRam(MinerPaths.MemSharer.scriptPath))
                 new MemSharer(ns, host, thread).run()
             }
         }}>Share mem (Servers)</button>
+        <button onClick={async () => {
+            ns.prompt("Which script do you want to run", { type: "select", choices: Object.keys(MinerPaths) }).then(async (script) => {
+                if (script.toString().length > 0) {
+                    return {
+                        host: await ns.prompt("Where?", { type: "text" }),
+                        target: await ns.prompt("Target?", { type: "select", choices: ScanAllServers(ns).sorted.filter(h => ns.hasRootAccess(h)).toSorted(ranker) }),
+                        script: MinerPaths[script.toString() as keyof MinerPathSignatures].scriptPath
+                    }
+                }
+            }).then(r => {
+                if (r && r.toString().length > 0) {
+                    const ram = ns.getServerMaxRam(r.host.toString())
+                    const usage = ns.getScriptRam(r.script.toString())
+                    ns.prompt(usage === 0 ? "Invalid" : `run ${r.script} -t ${Math.floor(ram / usage)} ${r.target} 0`)
+                }
+            }).catch(ns.tprint)
+        }}>Simulate Script</button>
+        {/* <button onClick={() => SolveContract(ns)}>Solve contracts</button> */}
     </div>
 }
